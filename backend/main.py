@@ -1,4 +1,3 @@
-
 from datetime import datetime, timezone
 from uuid import uuid4
 import os
@@ -20,7 +19,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 
-# Load environment variables from backend/.env
+# -------------------------------
+# DATABASE CONFIGURATION
+# -------------------------------
+
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -30,8 +32,6 @@ if not DATABASE_URL:
         "DATABASE_URL is missing. Check your backend/.env file."
     )
 
-
-# Connect to PostgreSQL
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True
@@ -46,18 +46,18 @@ SessionLocal = sessionmaker(
 Base = declarative_base()
 
 
-# Database table
+# -------------------------------
+# DATABASE MODEL
+# -------------------------------
+
 class DamageReport(Base):
     __tablename__ = "damage_reports"
 
     id = Column(String(36), primary_key=True, index=True)
-
     damage_type = Column(String(50), nullable=False)
     description = Column(String(500), nullable=False)
-
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
-
     severity = Column(Integer, nullable=False)
 
     status = Column(
@@ -73,19 +73,24 @@ class DamageReport(Base):
     )
 
 
-# Create table if it does not exist
 Base.metadata.create_all(bind=engine)
 
 
-# FastAPI application
+# -------------------------------
+# FASTAPI APPLICATION
+# -------------------------------
+
 app = FastAPI(
     title="InfraSentry AI",
     description="AI-powered Infrastructure Intelligence API",
-    version="0.4.0"
+    version="0.5.0"
 )
 
 
-# Allow React frontend to communicate with backend
+# -------------------------------
+# CORS CONFIGURATION
+# -------------------------------
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -98,7 +103,10 @@ app.add_middleware(
 )
 
 
-# Database session dependency
+# -------------------------------
+# DATABASE SESSION
+# -------------------------------
+
 def get_db():
     db = SessionLocal()
 
@@ -108,19 +116,49 @@ def get_db():
         db.close()
 
 
-# Input validation
+# -------------------------------
+# PYDANTIC SCHEMAS
+# -------------------------------
+
 class DamageReportCreate(BaseModel):
-    damage_type: str = Field(min_length=3, max_length=50)
-    description: str = Field(min_length=10, max_length=500)
+    damage_type: str = Field(
+        min_length=3,
+        max_length=50
+    )
 
-    latitude: float = Field(ge=-90, le=90)
-    longitude: float = Field(ge=-180, le=180)
+    description: str = Field(
+        min_length=10,
+        max_length=500
+    )
 
-    severity: int = Field(ge=1, le=5)
+    latitude: float = Field(
+        ge=-90,
+        le=90
+    )
+
+    longitude: float = Field(
+        ge=-180,
+        le=180
+    )
+
+    severity: int = Field(
+        ge=1,
+        le=5
+    )
 
 
-# Convert database object into JSON-friendly dictionary
+class DamageReportUpdate(BaseModel):
+    status: str = Field(
+        pattern="^(submitted|under_review|resolved)$"
+    )
+
+
+# -------------------------------
+# HELPER FUNCTION
+# -------------------------------
+
 def report_to_dict(report):
+
     return {
         "id": report.id,
         "damage_type": report.damage_type,
@@ -133,9 +171,13 @@ def report_to_dict(report):
     }
 
 
-# Home endpoint
+# -------------------------------
+# HOME ROUTE
+# -------------------------------
+
 @app.get("/")
 def home():
+
     return {
         "project": "InfraSentry AI",
         "status": "running",
@@ -143,18 +185,26 @@ def home():
     }
 
 
-# Backend health check
+# -------------------------------
+# HEALTH CHECK
+# -------------------------------
+
 @app.get("/health")
 def health():
+
     return {
         "status": "healthy",
         "message": "Backend is working correctly"
     }
 
 
-# Database health check
+# -------------------------------
+# DATABASE HEALTH CHECK
+# -------------------------------
+
 @app.get("/db-health")
 def database_health(db: Session = Depends(get_db)):
+
     try:
         db.execute(text("SELECT 1"))
 
@@ -163,14 +213,17 @@ def database_health(db: Session = Depends(get_db)):
             "status": "healthy"
         }
 
-    except Exception as error:
+    except Exception:
         raise HTTPException(
             status_code=503,
-            detail=f"Database connection failed: {str(error)}"
+            detail="Database connection failed"
         )
 
 
-# Create a new damage report
+# -------------------------------
+# CREATE DAMAGE REPORT
+# -------------------------------
+
 @app.post("/reports", status_code=201)
 def create_report(
     report: DamageReportCreate,
@@ -200,13 +253,17 @@ def create_report(
 
     except Exception:
         db.rollback()
+
         raise HTTPException(
             status_code=500,
             detail="Could not save damage report"
         )
 
 
-# Get all damage reports
+# -------------------------------
+# GET ALL DAMAGE REPORTS
+# -------------------------------
+
 @app.get("/reports")
 def get_reports(db: Session = Depends(get_db)):
 
@@ -225,7 +282,10 @@ def get_reports(db: Session = Depends(get_db)):
     }
 
 
-# Get one damage report by ID
+# -------------------------------
+# GET SINGLE DAMAGE REPORT
+# -------------------------------
+
 @app.get("/reports/{report_id}")
 def get_report(
     report_id: str,
@@ -245,3 +305,117 @@ def get_report(
         )
 
     return report_to_dict(report)
+
+
+# -------------------------------
+# UPDATE REPORT STATUS
+# -------------------------------
+
+@app.put("/reports/{report_id}")
+def update_report(
+    report_id: str,
+    update: DamageReportUpdate,
+    db: Session = Depends(get_db)
+):
+
+    report = (
+        db.query(DamageReport)
+        .filter(DamageReport.id == report_id)
+        .first()
+    )
+
+    if report is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Report not found"
+        )
+
+    report.status = update.status
+
+    try:
+        db.commit()
+        db.refresh(report)
+
+        return {
+            "message": "Report status updated successfully",
+            "report": report_to_dict(report)
+        }
+
+    except Exception:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Could not update report"
+        )
+
+
+# -------------------------------
+# DELETE DAMAGE REPORT
+# -------------------------------
+
+@app.delete("/reports/{report_id}")
+def delete_report(
+    report_id: str,
+    db: Session = Depends(get_db)
+):
+
+    report = (
+        db.query(DamageReport)
+        .filter(DamageReport.id == report_id)
+        .first()
+    )
+
+    if report is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Report not found"
+        )
+
+    try:
+        db.delete(report)
+        db.commit()
+
+        return {
+            "message": "Report deleted successfully"
+        }
+
+    except Exception:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Could not delete report"
+        )
+
+
+# -------------------------------
+# FILTER REPORTS BY SEVERITY
+# -------------------------------
+
+@app.get("/reports/severity/{severity}")
+def filter_reports(
+    severity: int,
+    db: Session = Depends(get_db)
+):
+
+    if severity < 1 or severity > 5:
+        raise HTTPException(
+            status_code=400,
+            detail="Severity must be between 1 and 5"
+        )
+
+    reports = (
+        db.query(DamageReport)
+        .filter(DamageReport.severity == severity)
+        .order_by(DamageReport.created_at.desc())
+        .all()
+    )
+
+    return {
+        "count": len(reports),
+        "reports": [
+            report_to_dict(report)
+            for report in reports
+        ]
+    }
