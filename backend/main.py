@@ -3,19 +3,36 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+
+# Create FastAPI application
 app = FastAPI(
     title="InfraSentry AI",
-    description="Infrastructure Damage Reporting API",
-    version="0.2.0"
+    description="AI-powered Infrastructure Intelligence API",
+    version="0.3.0"
 )
 
-# Temporary in-memory storage
+
+# Allow React frontend to communicate with FastAPI
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Temporary in-memory report storage
 reports = []
 
 
-# Data required to create a report
+# Report data validation
 class DamageReportCreate(BaseModel):
     damage_type: str = Field(min_length=3, max_length=50)
     description: str = Field(min_length=10, max_length=500)
@@ -26,20 +43,23 @@ class DamageReportCreate(BaseModel):
     severity: int = Field(ge=1, le=5)
 
 
-# Home API
+# Home endpoint
 @app.get("/")
 def home():
     return {
         "project": "InfraSentry AI",
         "status": "running",
-        "message": "Infrastructure Intelligence API"
+        "message": "Welcome to InfraSentry AI"
     }
 
 
-# Health check API
+# Health check endpoint
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "message": "Backend is working correctly"
+    }
 
 
 # Create a new damage report
@@ -71,7 +91,7 @@ def get_reports():
     }
 
 
-# Get one report using its ID
+# Get a particular report using its ID
 @app.get("/reports/{report_id}")
 def get_report(report_id: str):
 
