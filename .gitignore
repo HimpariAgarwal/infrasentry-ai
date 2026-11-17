@@ -1,5 +1,7 @@
 
-# Environment variables and secrets
+# =====================================
+# ENVIRONMENT VARIABLES AND SECRETS
+# =====================================
 .env
 .env.*
 !.env.example
@@ -7,94 +9,72 @@
 **/.env.*
 !.env.example
 
-# Python virtual environments
+# =====================================
+# PYTHON VIRTUAL ENVIRONMENTS
+# =====================================
 .venv/
 venv/
 env/
 
-# Python cache files
+# =====================================
+# PYTHON CACHE FILES
+# =====================================
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Testing and coverage
+# =====================================
+# TESTING AND COVERAGE
+# =====================================
 .pytest_cache/
 .coverage
 htmlcov/
 
-# Uploaded road damage images
+# =====================================
+# UPLOADED AND PROCESSED IMAGES
+# =====================================
 backend/uploads/
+backend/processed/
 
-# Frontend dependencies
+# =====================================
+# FRONTEND DEPENDENCIES
+# =====================================
 node_modules/
 
-# Production builds
+# =====================================
+# PRODUCTION BUILDS
+# =====================================
 dist/
 build/
 
-# TypeScript
+# =====================================
+# TYPESCRIPT
+# =====================================
 *.tsbuildinfo
 
-# IDE and editor files
+# =====================================
+# IDE AND EDITOR FILES
+# =====================================
 .vscode/
 .idea/
 
-# Operating system files
+# =====================================
+# OPERATING SYSTEM FILES
+# =====================================
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Logs
+# =====================================
+# LOGS
+# =====================================
 *.log
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 
-# Temporary files
+# =====================================
+# TEMPORARY FILES
+# =====================================
 *.tmp
 *.temp
-```
-
-### Step 2. Verify `.env` protection
-
-Run these commands in PowerShell:
-
-```powershell
-cd $HOME\Projects\infrasentry-ai
-
-git check-ignore -v backend/.env
-git check-ignore -v backend/uploads/
-```
-
-Both should show matching `.gitignore` rules.
-
-### Step 3. Check Git status
-
-```powershell
-git status
-```
-
-Make sure `backend/.env` and `backend/uploads/` are not listed as files to commit.
-
-**Important:** If `.env` was committed previously, `.gitignore` alone does not remove it from Git tracking. Check:
-
-```powershell
-git ls-files backend/.env
-```
-
-If this prints `backend/.env`, tell me before pushing so we can safely remove it from tracking without deleting your local file.
-
-### Step 4. Commit the changes
-
-After verification:
-
-```powershell
-git add .gitignore
-git add backend/main.py backend/image_upload.py frontend/src/App.tsx frontend/src/ImageUpload.tsx frontend/src/App.css
-
-git commit -m "Add image upload functionality and update gitignore"
-
-git push
-```
-
-Don't push until the `.env` tracking check is clear.
