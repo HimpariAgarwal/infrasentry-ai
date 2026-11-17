@@ -1,3 +1,4 @@
+
 from datetime import datetime, timezone
 from uuid import uuid4
 import os
@@ -15,13 +16,12 @@ from sqlalchemy import (
     Float,
     DateTime,
     text,
+    func,
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 
-# -------------------------------
 # DATABASE CONFIGURATION
-# -------------------------------
 
 load_dotenv()
 
@@ -29,7 +29,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
     raise RuntimeError(
-        "DATABASE_URL is missing. Check your backend/.env file."
+        "DATABASE_URL is missing. Check backend/.env"
     )
 
 engine = create_engine(
@@ -46,9 +46,7 @@ SessionLocal = sessionmaker(
 Base = declarative_base()
 
 
-# -------------------------------
 # DATABASE MODEL
-# -------------------------------
 
 class DamageReport(Base):
     __tablename__ = "damage_reports"
@@ -76,20 +74,13 @@ class DamageReport(Base):
 Base.metadata.create_all(bind=engine)
 
 
-# -------------------------------
 # FASTAPI APPLICATION
-# -------------------------------
 
 app = FastAPI(
     title="InfraSentry AI",
     description="AI-powered Infrastructure Intelligence API",
-    version="0.5.0"
+    version="0.6.0"
 )
-
-
-# -------------------------------
-# CORS CONFIGURATION
-# -------------------------------
 
 app.add_middleware(
     CORSMiddleware,
@@ -103,9 +94,7 @@ app.add_middleware(
 )
 
 
-# -------------------------------
 # DATABASE SESSION
-# -------------------------------
 
 def get_db():
     db = SessionLocal()
@@ -116,35 +105,14 @@ def get_db():
         db.close()
 
 
-# -------------------------------
-# PYDANTIC SCHEMAS
-# -------------------------------
+# REQUEST SCHEMAS
 
 class DamageReportCreate(BaseModel):
-    damage_type: str = Field(
-        min_length=3,
-        max_length=50
-    )
-
-    description: str = Field(
-        min_length=10,
-        max_length=500
-    )
-
-    latitude: float = Field(
-        ge=-90,
-        le=90
-    )
-
-    longitude: float = Field(
-        ge=-180,
-        le=180
-    )
-
-    severity: int = Field(
-        ge=1,
-        le=5
-    )
+    damage_type: str = Field(min_length=3, max_length=50)
+    description: str = Field(min_length=10, max_length=500)
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    severity: int = Field(ge=1, le=5)
 
 
 class DamageReportUpdate(BaseModel):
@@ -153,12 +121,9 @@ class DamageReportUpdate(BaseModel):
     )
 
 
-# -------------------------------
 # HELPER FUNCTION
-# -------------------------------
 
 def report_to_dict(report):
-
     return {
         "id": report.id,
         "damage_type": report.damage_type,
@@ -171,13 +136,10 @@ def report_to_dict(report):
     }
 
 
-# -------------------------------
-# HOME ROUTE
-# -------------------------------
+# HOME
 
 @app.get("/")
 def home():
-
     return {
         "project": "InfraSentry AI",
         "status": "running",
@@ -185,26 +147,20 @@ def home():
     }
 
 
-# -------------------------------
 # HEALTH CHECK
-# -------------------------------
 
 @app.get("/health")
 def health():
-
     return {
         "status": "healthy",
         "message": "Backend is working correctly"
     }
 
 
-# -------------------------------
-# DATABASE HEALTH CHECK
-# -------------------------------
+# DATABASE HEALTH
 
 @app.get("/db-health")
 def database_health(db: Session = Depends(get_db)):
-
     try:
         db.execute(text("SELECT 1"))
 
@@ -220,16 +176,13 @@ def database_health(db: Session = Depends(get_db)):
         )
 
 
-# -------------------------------
-# CREATE DAMAGE REPORT
-# -------------------------------
+# CREATE REPORT
 
 @app.post("/reports", status_code=201)
 def create_report(
     report: DamageReportCreate,
     db: Session = Depends(get_db)
 ):
-
     new_report = DamageReport(
         id=str(uuid4()),
         damage_type=report.damage_type,
@@ -253,45 +206,38 @@ def create_report(
 
     except Exception:
         db.rollback()
-
         raise HTTPException(
             status_code=500,
             detail="Could not save damage report"
         )
 
 
-# -------------------------------
-# GET ALL DAMAGE REPORTS
-# -------------------------------
+# GET ALL REPORTS
 
 @app.get("/reports")
 def get_reports(db: Session = Depends(get_db)):
-
-    all_reports = (
+    reports = (
         db.query(DamageReport)
         .order_by(DamageReport.created_at.desc())
         .all()
     )
 
     return {
-        "count": len(all_reports),
+        "count": len(reports),
         "reports": [
             report_to_dict(report)
-            for report in all_reports
+            for report in reports
         ]
     }
 
 
-# -------------------------------
-# GET SINGLE DAMAGE REPORT
-# -------------------------------
+# GET SINGLE REPORT
 
 @app.get("/reports/{report_id}")
 def get_report(
     report_id: str,
     db: Session = Depends(get_db)
 ):
-
     report = (
         db.query(DamageReport)
         .filter(DamageReport.id == report_id)
@@ -307,9 +253,7 @@ def get_report(
     return report_to_dict(report)
 
 
-# -------------------------------
 # UPDATE REPORT STATUS
-# -------------------------------
 
 @app.put("/reports/{report_id}")
 def update_report(
@@ -317,7 +261,6 @@ def update_report(
     update: DamageReportUpdate,
     db: Session = Depends(get_db)
 ):
-
     report = (
         db.query(DamageReport)
         .filter(DamageReport.id == report_id)
@@ -343,23 +286,19 @@ def update_report(
 
     except Exception:
         db.rollback()
-
         raise HTTPException(
             status_code=500,
             detail="Could not update report"
         )
 
 
-# -------------------------------
-# DELETE DAMAGE REPORT
-# -------------------------------
+# DELETE REPORT
 
 @app.delete("/reports/{report_id}")
 def delete_report(
     report_id: str,
     db: Session = Depends(get_db)
 ):
-
     report = (
         db.query(DamageReport)
         .filter(DamageReport.id == report_id)
@@ -382,23 +321,19 @@ def delete_report(
 
     except Exception:
         db.rollback()
-
         raise HTTPException(
             status_code=500,
             detail="Could not delete report"
         )
 
 
-# -------------------------------
 # FILTER REPORTS BY SEVERITY
-# -------------------------------
 
 @app.get("/reports/severity/{severity}")
 def filter_reports(
     severity: int,
     db: Session = Depends(get_db)
 ):
-
     if severity < 1 or severity > 5:
         raise HTTPException(
             status_code=400,
@@ -417,5 +352,87 @@ def filter_reports(
         "reports": [
             report_to_dict(report)
             for report in reports
+        ]
+    }
+
+
+# DAY 6: ANALYTICS SUMMARY
+
+@app.get("/analytics/summary")
+def analytics_summary(db: Session = Depends(get_db)):
+
+    # Total reports
+    total_reports = db.query(
+        func.count(DamageReport.id)
+    ).scalar() or 0
+
+    # Reports grouped by status
+    status_results = (
+        db.query(
+            DamageReport.status,
+            func.count(DamageReport.id)
+        )
+        .group_by(DamageReport.status)
+        .all()
+    )
+
+    status_counts = {
+        "submitted": 0,
+        "under_review": 0,
+        "resolved": 0
+    }
+
+    for status, count in status_results:
+        status_counts[status] = count
+
+    # Reports grouped by severity
+    severity_results = (
+        db.query(
+            DamageReport.severity,
+            func.count(DamageReport.id)
+        )
+        .group_by(DamageReport.severity)
+        .all()
+    )
+
+    severity_counts = {
+        str(level): 0 for level in range(1, 6)
+    }
+
+    for severity, count in severity_results:
+        severity_counts[str(severity)] = count
+
+    # Average severity
+    average_severity = db.query(
+        func.avg(DamageReport.severity)
+    ).scalar()
+
+    # Five latest reports
+    recent_reports = (
+        db.query(DamageReport)
+        .order_by(DamageReport.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    return {
+        "project": "InfraSentry AI",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+
+        "total_reports": total_reports,
+
+        "status_summary": status_counts,
+
+        "severity_summary": severity_counts,
+
+        "average_severity": (
+            round(float(average_severity), 2)
+            if average_severity is not None
+            else 0
+        ),
+
+        "recent_reports": [
+            report_to_dict(report)
+            for report in recent_reports
         ]
     }
