@@ -1,21 +1,21 @@
 
-import {
-  useEffect,
-  useState,
-  type ChangeEvent,
-  type FormEvent,
-} from "react";
-
+import { useEffect, useState } from "react";
 import {
   Activity,
+  AlertTriangle,
+  CheckCircle2,
+  Clock3,
+  FileText,
   MapPin,
+  RefreshCw,
   ShieldCheck,
-  Send,
+  TrendingUp,
 } from "lucide-react";
-
 import "./App.css";
 
-interface Report {
+const API_URL = "http://127.0.0.1:8000";
+
+type Report = {
   id: string;
   damage_type: string;
   description: string;
@@ -24,347 +24,389 @@ interface Report {
   severity: number;
   status: string;
   created_at: string;
-}
+};
 
-const API_URL = "http://127.0.0.1:8000";
+type Analytics = {
+  total_reports: number;
+  status_summary: Record<string, number>;
+  severity_summary: Record<string, number>;
+  average_severity: number;
+  recent_reports: Report[];
+};
 
 function App() {
-  const [reports, setReports] = useState<Report[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [data, setData] = useState<Analytics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [form, setForm] = useState({
-    damage_type: "Pothole",
-    description: "",
-    latitude: "28.6692",
-    longitude: "77.4538",
-    severity: "3",
-  });
-
-  // Fetch all reports from backend
-  async function loadReports() {
+  const fetchAnalytics = async () => {
     try {
-      const response = await fetch(`${API_URL}/reports`);
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(`${API_URL}/analytics/summary`);
 
       if (!response.ok) {
-        throw new Error("Could not load reports");
+        throw new Error("Unable to fetch analytics data.");
       }
 
-      const data = await response.json();
-
-      setReports(data.reports);
-    } catch {
-      setMessage("Cannot connect to backend. Is FastAPI running?");
-    }
-  }
-
-  // Load reports when website opens
-  useEffect(() => {
-    loadReports();
-  }, []);
-
-  // Handle form input changes
-  function handleChange(
-    event: ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value,
-    });
-  }
-
-  // Submit a new damage report
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>
-  ) {
-    event.preventDefault();
-
-    setLoading(true);
-    setMessage("");
-
-    try {
-      const response = await fetch(`${API_URL}/reports`, {
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json",
-        },
-
-        body: JSON.stringify({
-          damage_type: form.damage_type,
-          description: form.description,
-          latitude: Number(form.latitude),
-          longitude: Number(form.longitude),
-          severity: Number(form.severity),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.detail?.[0]?.msg ||
-          data.detail ||
-          "Report submission failed"
-        );
-      }
-
-      setMessage("Report submitted successfully!");
-
-      setForm({
-        damage_type: "Pothole",
-        description: "",
-        latitude: "28.6692",
-        longitude: "77.4538",
-        severity: "3",
-      });
-
-      await loadReports();
-
-    } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong"
+      const result: Analytics = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong."
       );
-
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
+
+  const severityLabels = ["1", "2", "3", "4", "5"];
+
+  const statusLabels = [
+    { key: "submitted", label: "Submitted" },
+    { key: "under_review", label: "Under Review" },
+    { key: "resolved", label: "Resolved" },
+  ];
+
+  const getHighSeverity = () => {
+    if (!data) return 0;
+
+    return (
+      (data.severity_summary["4"] || 0) +
+      (data.severity_summary["5"] || 0)
+    );
+  };
+
+  const getDate = (date: string) => {
+    return new Date(date).toLocaleString();
+  };
+
+  if (loading && !data) {
+    return (
+      <div className="loading-screen">
+        <Activity size={36} />
+        <h2>Loading InfraSentry AI...</h2>
+        <p>Connecting to infrastructure intelligence server</p>
+      </div>
+    );
   }
 
-  return (
-    <div className="app">
+  if (error && !data) {
+    return (
+      <div className="error-screen">
+        <AlertTriangle size={42} />
+        <h2>Connection failed</h2>
+        <p>{error}</p>
+        <button onClick={fetchAnalytics}>
+          <RefreshCw size={17} /> Retry
+        </button>
+      </div>
+    );
+  }
 
-      {/* Navigation */}
-      <header className="navbar">
+  if (!data) return null;
+
+  const cards = [
+    {
+      title: "Total Reports",
+      value: data.total_reports,
+      icon: FileText,
+      className: "blue",
+    },
+    {
+      title: "Under Review",
+      value: data.status_summary.under_review || 0,
+      icon: Clock3,
+      className: "orange",
+    },
+    {
+      title: "Resolved",
+      value: data.status_summary.resolved || 0,
+      icon: CheckCircle2,
+      className: "green",
+    },
+    {
+      title: "High Severity",
+      value: getHighSeverity(),
+      icon: AlertTriangle,
+      className: "red",
+    },
+  ];
+
+  const maxSeverity = Math.max(
+    1,
+    ...severityLabels.map(
+      (level) => data.severity_summary[level] || 0
+    )
+  );
+
+  const maxStatus = Math.max(
+    1,
+    ...statusLabels.map(
+      (item) => data.status_summary[item.key] || 0
+    )
+  );
+
+  return (
+    <div className="app-container">
+      <aside className="sidebar">
         <div className="brand">
-          <ShieldCheck size={28} />
-          <h2>InfraSentry AI</h2>
+          <div className="brand-icon">
+            <ShieldCheck size={25} />
+          </div>
+          <div>
+            <h2>InfraSentry</h2>
+            <span>AI Intelligence</span>
+          </div>
         </div>
 
-        <span>Infrastructure Intelligence</span>
-      </header>
+        <div className="sidebar-label">MAIN MENU</div>
 
+        <div className="nav-item active">
+          <Activity size={19} />
+          Dashboard
+        </div>
 
-      <main className="container">
+        <div className="sidebar-footer">
+          <div className="online-dot"></div>
+          System Connected
+          <span>API</span>
+        </div>
+      </aside>
 
-        {/* Hero Section */}
-        <section className="hero">
-          <h1>Smarter Infrastructure.</h1>
-
-          <p>
-            Report road damage. Help make our roads safer.
-          </p>
-        </section>
-
-
-        {/* Dashboard Statistics */}
-        <section className="dashboard">
-
-          <div className="stat-card">
-            <Activity size={26} />
-
-            <h3>{reports.length}</h3>
-
-            <p>Total Reports</p>
+      <main className="main-content">
+        <header className="topbar">
+          <div>
+            <p className="breadcrumb">Workspace / Overview</p>
+            <h1>Infrastructure Dashboard</h1>
+            <p className="subtitle">
+              Monitor road damage reports and infrastructure health.
+            </p>
           </div>
 
-          <div className="stat-card">
-            <MapPin size={26} />
-
-            <h3>Live</h3>
-
-            <p>Report Tracking</p>
-          </div>
-
-        </section>
-
-
-        {/* Damage Report Form */}
-        <section className="report-section">
-
-          <h2>Submit a Damage Report</h2>
-
-          <p className="section-description">
-            Tell us about the infrastructure problem.
-          </p>
-
-
-          <form onSubmit={handleSubmit}>
-
-            <label>Damage Type</label>
-
-            <select
-              name="damage_type"
-              value={form.damage_type}
-              onChange={handleChange}
-            >
-              <option value="Pothole">Pothole</option>
-              <option value="Crack">Road Crack</option>
-              <option value="Surface Damage">
-                Surface Damage
-              </option>
-            </select>
-
-
-            <label>Description</label>
-
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              placeholder="Describe the damage..."
-              minLength={10}
-              maxLength={500}
-              required
+          <button
+            className="refresh-button"
+            onClick={fetchAnalytics}
+            disabled={loading}
+          >
+            <RefreshCw
+              size={17}
+              className={loading ? "spinning" : ""}
             />
+            Refresh Data
+          </button>
+        </header>
 
+        {error && (
+          <div className="inline-error">
+            {error} Please refresh to try again.
+          </div>
+        )}
 
-            <div className="form-row">
+        <section className="welcome-banner">
+          <div>
+            <span className="banner-tag">AI-POWERED MONITORING</span>
+            <h2>Infrastructure Intelligence Center</h2>
+            <p>
+              Track, analyze and manage road damage reports
+              from one centralized dashboard.
+            </p>
+          </div>
+          <div className="banner-icon">
+            <TrendingUp size={58} />
+          </div>
+        </section>
 
-              <div>
-                <label>Latitude</label>
+        <section className="stats-grid">
+          {cards.map((card) => {
+            const Icon = card.icon;
 
-                <input
-                  name="latitude"
-                  type="number"
-                  step="any"
-                  min="-90"
-                  max="90"
-                  value={form.latitude}
-                  onChange={handleChange}
-                  required
-                />
+            return (
+              <div className="stat-card" key={card.title}>
+                <div className={`stat-icon ${card.className}`}>
+                  <Icon size={22} />
+                </div>
+
+                <p>{card.title}</p>
+                <h2>{card.value}</h2>
+                <span>Live database value</span>
               </div>
+            );
+          })}
+        </section>
 
-
+        <section className="charts-grid">
+          <div className="panel">
+            <div className="panel-heading">
               <div>
-                <label>Longitude</label>
-
-                <input
-                  name="longitude"
-                  type="number"
-                  step="any"
-                  min="-180"
-                  max="180"
-                  value={form.longitude}
-                  onChange={handleChange}
-                  required
-                />
+                <h3>Severity Distribution</h3>
+                <p>Reports grouped by damage severity</p>
               </div>
-
+              <AlertTriangle size={21} />
             </div>
 
+            <div className="bar-chart">
+              {severityLabels.map((level) => {
+                const count =
+                  data.severity_summary[level] || 0;
 
-            <label>Severity</label>
+                return (
+                  <div className="bar-column" key={level}>
+                    <span className="bar-value">{count}</span>
 
-            <select
-              name="severity"
-              value={form.severity}
-              onChange={handleChange}
-            >
-              <option value="1">1 - Very Low</option>
-              <option value="2">2 - Low</option>
-              <option value="3">3 - Moderate</option>
-              <option value="4">4 - High</option>
-              <option value="5">5 - Critical</option>
-            </select>
+                    <div className="bar-track">
+                      <div
+                        className={`bar-fill severity-${level}`}
+                        style={{
+                          height: `${(count / maxSeverity) * 100}%`,
+                        }}
+                      />
+                    </div>
 
+                    <span className="bar-label">
+                      Level {level}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
 
-            <button type="submit" disabled={loading}>
-              <Send size={18} />
-
-              {loading
-                ? "Submitting..."
-                : "Submit Report"}
-            </button>
-
-          </form>
-
-
-          {message && (
-            <p className="message" role="status">
-              {message}
+            <p className="chart-note">
+              Severity 1 = Low damage · Severity 5 = Critical damage
             </p>
-          )}
-
-        </section>
-
-
-        {/* Recent Reports */}
-        <section className="reports-section">
-
-          <div className="reports-heading">
-
-            <h2>Recent Reports</h2>
-
-            <button
-              type="button"
-              className="refresh-button"
-              onClick={loadReports}
-            >
-              Refresh
-            </button>
-
           </div>
 
+          <div className="panel">
+            <div className="panel-heading">
+              <div>
+                <h3>Report Status</h3>
+                <p>Current report progress</p>
+              </div>
+              <Activity size={21} />
+            </div>
 
-          {reports.length === 0 ? (
+            <div className="status-chart">
+              {statusLabels.map((item) => {
+                const count =
+                  data.status_summary[item.key] || 0;
 
-            <p className="empty-state">
-              No reports submitted yet.
-            </p>
+                return (
+                  <div className="status-row" key={item.key}>
+                    <div className="status-info">
+                      <span>{item.label}</span>
+                      <strong>{count}</strong>
+                    </div>
 
-          ) : (
+                    <div className="status-track">
+                      <div
+                        className={`status-fill ${item.key}`}
+                        style={{
+                          width: `${(count / maxStatus) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-            reports.map((report) => (
-
-              <article
-                className="report-card"
-                key={report.id}
-              >
-
-                <div>
-                  <h3>{report.damage_type}</h3>
-
-                  <p>{report.description}</p>
-
-                  <small>
-                    Location: {report.latitude},{" "}
-                    {report.longitude}
-                  </small>
-                </div>
-
-
-                <div className="report-meta">
-
-                  <span>
-                    Severity: {report.severity}/5
-                  </span>
-
-                  <span>{report.status}</span>
-
-                </div>
-
-              </article>
-
-            ))
-
-          )}
-
+            <div className="average-box">
+              <span>Average Damage Severity</span>
+              <strong>
+                {data.average_severity.toFixed(2)}
+                <small> / 5</small>
+              </strong>
+            </div>
+          </div>
         </section>
 
+        <section className="panel recent-panel">
+          <div className="panel-heading">
+            <div>
+              <h3>Recent Damage Reports</h3>
+              <p>Latest five reports from your database</p>
+            </div>
+            <FileText size={21} />
+          </div>
+
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Damage Type</th>
+                  <th>Location</th>
+                  <th>Severity</th>
+                  <th>Status</th>
+                  <th>Reported At</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {data.recent_reports.length > 0 ? (
+                  data.recent_reports.map((report) => (
+                    <tr key={report.id}>
+                      <td>
+                        <strong>{report.damage_type}</strong>
+                        <small>{report.description}</small>
+                      </td>
+
+                      <td>
+                        <span className="location-cell">
+                          <MapPin size={14} />
+                          {report.latitude.toFixed(3)},{" "}
+                          {report.longitude.toFixed(3)}
+                        </span>
+                      </td>
+
+                      <td>
+                        <span
+                          className={`severity-badge level-${report.severity}`}
+                        >
+                          Level {report.severity}
+                        </span>
+                      </td>
+
+                      <td>
+                        <span
+                          className={`status-badge ${report.status}`}
+                        >
+                          {report.status.replace("_", " ")}
+                        </span>
+                      </td>
+
+                      <td className="date-cell">
+                        {getDate(report.created_at)}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="empty-state">
+                      No reports found. Submit your first
+                      damage report to see it here.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <footer className="dashboard-footer">
+          <span>
+            <ShieldCheck size={16} />
+            InfraSentry AI · Infrastructure Intelligence Platform
+          </span>
+          <span>Powered by FastAPI + PostgreSQL</span>
+        </footer>
       </main>
-
-
-      {/* Footer */}
-      <footer>
-        InfraSentry AI · Development Version 0.3.0
-      </footer>
-
     </div>
   );
 }
