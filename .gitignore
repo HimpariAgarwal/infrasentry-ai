@@ -1,10 +1,100 @@
+
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
 **/.env
 **/.env.*
 !.env.example
+
+# Python virtual environments
 .venv/
+venv/
+env/
+
+# Python cache files
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Uploaded road damage images
+backend/uploads/
+
+# Frontend dependencies
 node_modules/
+
+# Production builds
+dist/
+build/
+
+# TypeScript
+*.tsbuildinfo
+
+# IDE and editor files
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+```
+
+### Step 2. Verify `.env` protection
+
+Run these commands in PowerShell:
+
+```powershell
+cd $HOME\Projects\infrasentry-ai
+
+git check-ignore -v backend/.env
+git check-ignore -v backend/uploads/
+```
+
+Both should show matching `.gitignore` rules.
+
+### Step 3. Check Git status
+
+```powershell
+git status
+```
+
+Make sure `backend/.env` and `backend/uploads/` are not listed as files to commit.
+
+**Important:** If `.env` was committed previously, `.gitignore` alone does not remove it from Git tracking. Check:
+
+```powershell
+git ls-files backend/.env
+```
+
+If this prints `backend/.env`, tell me before pushing so we can safely remove it from tracking without deleting your local file.
+
+### Step 4. Commit the changes
+
+After verification:
+
+```powershell
+git add .gitignore
+git add backend/main.py backend/image_upload.py frontend/src/App.tsx frontend/src/ImageUpload.tsx frontend/src/App.css
+
+git commit -m "Add image upload functionality and update gitignore"
+
+git push
+```
+
+Don't push until the `.env` tracking check is clear.

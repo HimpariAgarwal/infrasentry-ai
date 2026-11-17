@@ -1,20 +1,20 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Activity,
   AlertTriangle,
   CheckCircle,
   Clock,
-  Trash2,
+  FilePlus2,
+  LayoutDashboard,
   RefreshCw,
   Search,
-  Shield,
-  MapPin,
-  FileText,
-  Plus,
-  ArrowLeft,
-  Send,
+  Trash2,
+  Upload,
+  XCircle,
 } from "lucide-react";
+
+import ImageUpload from "./ImageUpload";
 import "./App.css";
 
 const API = "http://127.0.0.1:8000";
@@ -26,8 +26,8 @@ type Report = {
   latitude: number;
   longitude: number;
   severity: number;
-  status: "submitted" | "under_review" | "resolved";
-  created_at: string;
+  status: string;
+  created_at: string | null;
 };
 
 type Analytics = {
@@ -50,8 +50,8 @@ type ReportForm = {
   severity: string;
 };
 
-const initialForm: ReportForm = {
-  damage_type: "",
+const emptyForm: ReportForm = {
+  damage_type: "Pothole",
   description: "",
   latitude: "",
   longitude: "",
@@ -67,93 +67,99 @@ function App() {
   const [success, setSuccess] = useState("");
 
   const [search, setSearch] = useState("");
-  const [severityFilter, setSeverityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [severityFilter, setSeverityFilter] = useState("all");
 
-  const [updatingId, setUpdatingId] = useState("");
-  const [deletingId, setDeletingId] = useState("");
+  const [activePage, setActivePage] = useState<
+    "dashboard" | "new-report" | "image-upload"
+  >("dashboard");
 
-  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState<ReportForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState<ReportForm>(initialForm);
+
+  // --------------------------------
+  // FETCH REPORTS
+  // --------------------------------
+
+  async function fetchReports() {
+    try {
+      const response = await fetch(`${API}/reports`);
+
+      if (!response.ok) {
+        throw new Error("Could not fetch reports.");
+      }
+
+      const data = await response.json();
+
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.reports)
+          ? data.reports
+          : Array.isArray(data?.items)
+            ? data.items
+            : null;
+
+      if (!list) {
+        throw new Error("Unexpected reports API response.");
+      }
+
+      setReports(list);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load reports."
+      );
+    }
+  }
+
+  // --------------------------------
+  // FETCH ANALYTICS
+  // --------------------------------
+
+  async function fetchAnalytics() {
+    try {
+      const response = await fetch(`${API}/analytics/summary`);
+
+      if (!response.ok) {
+        throw new Error("Could not fetch analytics.");
+      }
+
+      const data = await response.json();
+      setAnalytics(data);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load analytics."
+      );
+    }
+  }
+
+  // --------------------------------
+  // INITIAL LOAD
+  // --------------------------------
 
   async function loadDashboard() {
     setLoading(true);
     setError("");
 
-    try {
-      const [analyticsResponse, reportsResponse] = await Promise.all([
-        fetch(`${API}/analytics/summary`),
-        fetch(`${API}/reports`),
-      ]);
+    await Promise.all([
+      fetchReports(),
+      fetchAnalytics(),
+    ]);
 
-      if (!analyticsResponse.ok || !reportsResponse.ok) {
-        throw new Error("Unable to load dashboard data.");
-      }
-
-      const analyticsData = await analyticsResponse.json();
-      const reportsData = await reportsResponse.json();
-
-      let reportList: Report[] = [];
-
-      if (Array.isArray(reportsData)) {
-        reportList = reportsData;
-      } else if (Array.isArray(reportsData?.reports)) {
-        reportList = reportsData.reports;
-      } else if (Array.isArray(reportsData?.items)) {
-        reportList = reportsData.items;
-      } else {
-        throw new Error("Unexpected reports API response.");
-      }
-
-      setReports(reportList);
-      setAnalytics(analyticsData);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to load data."
-      );
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
   }
 
   useEffect(() => {
     loadDashboard();
   }, []);
 
-  const filteredReports = useMemo(() => {
-    return reports.filter((report) => {
-      const searchText = search.toLowerCase();
+  // --------------------------------
+  // CREATE NEW REPORT
+  // --------------------------------
 
-      const matchesSearch =
-        (report.damage_type || "").toLowerCase().includes(searchText) ||
-        (report.description || "").toLowerCase().includes(searchText) ||
-        (report.id || "").toLowerCase().includes(searchText);
-
-      const matchesSeverity =
-        severityFilter === "all" ||
-        String(report.severity) === severityFilter;
-
-      const matchesStatus =
-        statusFilter === "all" ||
-        report.status === statusFilter;
-
-      return matchesSearch && matchesSeverity && matchesStatus;
-    });
-  }, [reports, search, severityFilter, statusFilter]);
-
-  function handleFormChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  async function submitReport(
+    event: React.FormEvent<HTMLFormElement>
   ) {
-    const { name, value } = e.target;
-    setForm((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
-  }
-
-  async function submitReport(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+    event.preventDefault();
 
     setError("");
     setSuccess("");
@@ -163,25 +169,29 @@ function App() {
     const severity = Number(form.severity);
 
     if (
+      form.latitude.trim() === "" ||
+      form.longitude.trim() === "" ||
       !Number.isFinite(latitude) ||
-      latitude < -90 ||
-      latitude > 90
-    ) {
-      setError("Latitude must be a number between -90 and 90.");
-      return;
-    }
-
-    if (
       !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
       longitude < -180 ||
       longitude > 180
     ) {
-      setError("Longitude must be a number between -180 and 180.");
+      setError("Please enter valid latitude and longitude.");
       return;
     }
 
     if (!Number.isInteger(severity) || severity < 1 || severity > 5) {
-      setError("Please select a severity between 1 and 5.");
+      setError("Severity must be between 1 and 5.");
+      return;
+    }
+
+    if (
+      form.description.trim().length < 10 ||
+      form.description.trim().length > 500
+    ) {
+      setError("Description must contain 10 to 500 characters.");
       return;
     }
 
@@ -195,44 +205,38 @@ function App() {
         },
         body: JSON.stringify({
           damage_type: form.damage_type,
-          description: form.description,
+          description: form.description.trim(),
           latitude,
           longitude,
           severity,
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        const message =
-          errorData?.detail
-            ? typeof errorData.detail === "string"
-              ? errorData.detail
-              : JSON.stringify(errorData.detail)
-            : "Could not create report.";
+      const data = await response.json();
 
-        throw new Error(message);
+      if (!response.ok) {
+        throw new Error(data.detail || "Report submission failed.");
       }
 
-      setForm(initialForm);
-      setShowForm(false);
-      setSuccess("New road damage report submitted successfully!");
+      setSuccess("Road damage report submitted successfully!");
+      setForm(emptyForm);
 
       await loadDashboard();
+      setActivePage("dashboard");
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Report submission failed."
+        err instanceof Error ? err.message : "Could not submit report."
       );
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function updateStatus(
-    id: string,
-    newStatus: Report["status"]
-  ) {
-    setUpdatingId(id);
+  // --------------------------------
+  // UPDATE REPORT STATUS
+  // --------------------------------
+
+  async function updateStatus(id: string, status: string) {
     setError("");
     setSuccess("");
 
@@ -242,30 +246,35 @@ function App() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to update report status.");
+        throw new Error(data.detail || "Status update failed.");
       }
 
-      await loadDashboard();
       setSuccess("Report status updated successfully.");
+      await loadDashboard();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Status update failed."
       );
-    } finally {
-      setUpdatingId("");
     }
   }
 
-  async function deleteReport(id: string) {
-    if (!window.confirm("Are you sure you want to delete this report?")) {
-      return;
-    }
+  // --------------------------------
+  // DELETE REPORT
+  // --------------------------------
 
-    setDeletingId(id);
+  async function deleteReport(id: string) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this report?"
+    );
+
+    if (!confirmed) return;
+
     setError("");
     setSuccess("");
 
@@ -274,258 +283,650 @@ function App() {
         method: "DELETE",
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to delete report.");
+        throw new Error(data.detail || "Delete failed.");
       }
 
-      await loadDashboard();
       setSuccess("Report deleted successfully.");
+      await loadDashboard();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Delete failed."
+        err instanceof Error ? err.message : "Could not delete report."
       );
-    } finally {
-      setDeletingId("");
     }
   }
 
-  function getSeverityLabel(severity: number) {
-    if (severity >= 4) return "High";
-    if (severity === 3) return "Medium";
-    return "Low";
+  // --------------------------------
+  // FILTER REPORTS
+  // --------------------------------
+
+  const filteredReports = reports.filter((report) => {
+    const searchText = search.toLowerCase();
+
+    const matchesSearch =
+      report.damage_type.toLowerCase().includes(searchText) ||
+      report.description.toLowerCase().includes(searchText) ||
+      report.id.toLowerCase().includes(searchText);
+
+    const matchesStatus =
+      statusFilter === "all" || report.status === statusFilter;
+
+    const matchesSeverity =
+      severityFilter === "all" ||
+      report.severity === Number(severityFilter);
+
+    return matchesSearch && matchesStatus && matchesSeverity;
+  });
+
+  // --------------------------------
+  // HELPERS
+  // --------------------------------
+
+  function severityColor(severity: number) {
+    if (severity >= 4) return "#dc4444";
+    if (severity === 3) return "#e59a26";
+    return "#269b69";
   }
 
-  function formatDate(date: string) {
+  function formatDate(date: string | null) {
     if (!date) return "N/A";
 
-    const parsedDate = new Date(date);
-
-    if (Number.isNaN(parsedDate.getTime())) return "N/A";
-
-    return parsedDate.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return new Date(date).toLocaleString();
   }
 
-  const highSeverity =
-    (analytics?.severity_summary?.["4"] || 0) +
-    (analytics?.severity_summary?.["5"] || 0);
+  // --------------------------------
+  // DASHBOARD UI
+  // --------------------------------
 
   return (
-    <div className="app">
+    <div className="app-container">
+
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-icon">
-            <Shield size={25} />
+            <Activity size={23} />
           </div>
+
           <div>
             <h2>InfraSentry</h2>
-            <span>AI Infrastructure Intelligence</span>
+            <span>AI INTELLIGENCE</span>
           </div>
         </div>
 
-        <nav className="navigation">
-          <button
-            className={`nav-item ${!showForm ? "active" : ""}`}
-            onClick={() => setShowForm(false)}
-          >
-            <Activity size={19} />
-            Dashboard
-          </button>
+        <div className="sidebar-label">MAIN MENU</div>
 
-          <button
-            className={`nav-item ${showForm ? "active" : ""}`}
-            onClick={() => setShowForm(true)}
-          >
-            <FileText size={19} />
-            New Report
-          </button>
-        </nav>
+        <button
+          className={`nav-item ${
+            activePage === "dashboard" ? "active" : ""
+          }`}
+          onClick={() => setActivePage("dashboard")}
+        >
+          <LayoutDashboard size={18} />
+          Dashboard
+        </button>
+
+        <button
+          className={`nav-item ${
+            activePage === "new-report" ? "active" : ""
+          }`}
+          onClick={() => setActivePage("new-report")}
+        >
+          <FilePlus2 size={18} />
+          New Report
+        </button>
+
+        <button
+          className={`nav-item ${
+            activePage === "image-upload" ? "active" : ""
+          }`}
+          onClick={() => setActivePage("image-upload")}
+        >
+          <Upload size={18} />
+          Image Upload
+        </button>
 
         <div className="sidebar-bottom">
           <div className="system-status">
             <span className="status-dot"></span>
-            System Monitoring
+            System Active
           </div>
+
           <p>InfraSentry AI v1.0</p>
         </div>
       </aside>
 
       <main className="main-content">
-        <header className="topbar">
+
+        <header className="top-header">
           <div>
-            <p className="eyebrow">INFRASTRUCTURE MONITORING</p>
-            <h1>{showForm ? "Submit Damage Report" : "Report Management"}</h1>
-            <p className="subtitle">
-              {showForm
-                ? "Provide details about a road damage incident."
-                : "Monitor, manage and prioritize road damage reports."}
+            <h1>
+              {activePage === "dashboard"
+                ? "Infrastructure Dashboard"
+                : activePage === "new-report"
+                  ? "Create New Report"
+                  : "Image Upload"}
+            </h1>
+
+            <p>
+              Monitor, analyze and manage road infrastructure damage.
             </p>
           </div>
 
-          {!showForm && (
-            <button
-              className="refresh-btn"
-              onClick={loadDashboard}
-              disabled={loading}
-            >
-              <RefreshCw size={16} />
-              Refresh
-            </button>
-          )}
+          <button
+            className="refresh-button"
+            onClick={loadDashboard}
+            disabled={loading}
+          >
+            <RefreshCw size={16} />
+            Refresh
+          </button>
         </header>
 
         {error && (
           <div className="error-message">
-            <AlertTriangle size={18} />
+            <XCircle size={17} />
             {error}
+            <button onClick={() => setError("")}>×</button>
           </div>
         )}
 
         {success && (
           <div className="success-message">
-            <CheckCircle size={18} />
+            <CheckCircle size={17} />
             {success}
+            <button onClick={() => setSuccess("")}>×</button>
           </div>
         )}
 
-        {showForm ? (
-          <section className="form-section">
-            <div className="form-heading">
+        {/* DASHBOARD PAGE */}
+
+        {activePage === "dashboard" && (
+          <>
+            <div className="welcome-banner">
               <div>
-                <h2>New Road Damage Report</h2>
-                <p>Enter accurate details so the issue can be assessed.</p>
+                <span className="banner-tag">
+                  INFRASTRUCTURE INTELLIGENCE PLATFORM
+                </span>
+
+                <h2>Road Damage Monitoring System</h2>
+
+                <p>
+                  Track road damage reports and monitor infrastructure
+                  conditions through intelligent analytics.
+                </p>
               </div>
-              <button
-                className="back-btn"
-                onClick={() => {
-                  setShowForm(false);
-                  setError("");
-                  setSuccess("");
-                }}
-              >
-                <ArrowLeft size={16} />
-                Back to Dashboard
-              </button>
+
+              <Activity size={60} />
             </div>
 
-            <form className="report-form" onSubmit={submitReport}>
+            {loading ? (
+              <div className="loading">
+                Loading dashboard...
+              </div>
+            ) : (
+              <>
+                <section className="stats-grid">
+
+                  <div className="stat-card">
+                    <div className="stat-icon blue">
+                      <Activity size={21} />
+                    </div>
+
+                    <p>Total Reports</p>
+
+                    <h2>{analytics?.total_reports ?? reports.length}</h2>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-icon orange">
+                      <Clock size={21} />
+                    </div>
+
+                    <p>Under Review</p>
+
+                    <h2>
+                      {analytics?.status_summary?.under_review ?? 0}
+                    </h2>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-icon green">
+                      <CheckCircle size={21} />
+                    </div>
+
+                    <p>Resolved</p>
+
+                    <h2>
+                      {analytics?.status_summary?.resolved ?? 0}
+                    </h2>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-icon red">
+                      <AlertTriangle size={21} />
+                    </div>
+
+                    <p>High Severity</p>
+
+                    <h2>
+                      {(analytics?.severity_summary?.["4"] ?? 0) +
+                        (analytics?.severity_summary?.["5"] ?? 0)}
+                    </h2>
+                  </div>
+
+                </section>
+
+                <section className="analytics-grid">
+
+                  <div className="panel">
+                    <h3>Severity Distribution</h3>
+
+                    <p className="panel-subtitle">
+                      Reports grouped by damage severity
+                    </p>
+
+                    <div className="severity-chart">
+                      {[1, 2, 3, 4, 5].map((level) => {
+                        const count =
+                          analytics?.severity_summary?.[
+                            String(level)
+                          ] ?? 0;
+
+                        const maximum = Math.max(
+                          1,
+                          ...Object.values(
+                            analytics?.severity_summary ?? {}
+                          )
+                        );
+
+                        return (
+                          <div
+                            className="severity-column"
+                            key={level}
+                          >
+                            <span>{count}</span>
+
+                            <div className="bar-background">
+                              <div
+                                className="severity-bar"
+                                style={{
+                                  height: `${(count / maximum) * 100}%`,
+                                  background: severityColor(level),
+                                }}
+                              />
+                            </div>
+
+                            <span>Level {level}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="panel">
+                    <h3>Report Status</h3>
+
+                    <p className="panel-subtitle">
+                      Current report progress
+                    </p>
+
+                    {[
+                      {
+                        label: "Submitted",
+                        value:
+                          analytics?.status_summary?.submitted ?? 0,
+                        color: "#3b82f6",
+                      },
+                      {
+                        label: "Under Review",
+                        value:
+                          analytics?.status_summary?.under_review ?? 0,
+                        color: "#e59a26",
+                      },
+                      {
+                        label: "Resolved",
+                        value:
+                          analytics?.status_summary?.resolved ?? 0,
+                        color: "#269b69",
+                      },
+                    ].map((item) => {
+                      const total = analytics?.total_reports ?? 0;
+
+                      const percentage =
+                        total > 0
+                          ? (item.value / total) * 100
+                          : 0;
+
+                      return (
+                        <div
+                          className="status-row"
+                          key={item.label}
+                        >
+                          <div className="status-info">
+                            <span>{item.label}</span>
+                            <strong>{item.value}</strong>
+                          </div>
+
+                          <div className="status-track">
+                            <div
+                              className="status-fill"
+                              style={{
+                                width: `${percentage}%`,
+                                background: item.color,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    <div className="average-severity">
+                      <span>Average Severity</span>
+                      <strong>
+                        {analytics?.average_severity ?? 0} / 5
+                      </strong>
+                    </div>
+                  </div>
+
+                </section>
+
+                <section className="panel reports-panel">
+
+                  <div className="reports-heading">
+                    <div>
+                      <h3>Road Damage Reports</h3>
+
+                      <p className="panel-subtitle">
+                        Search, filter and manage reports
+                      </p>
+                    </div>
+
+                    <button
+                      className="add-report-btn"
+                      onClick={() => setActivePage("new-report")}
+                    >
+                      + New Report
+                    </button>
+                  </div>
+
+                  <div className="filters">
+
+                    <div className="search-box">
+                      <Search size={17} />
+
+                      <input
+                        type="text"
+                        placeholder="Search reports..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                      />
+                    </div>
+
+                    <select
+                      value={statusFilter}
+                      onChange={(e) =>
+                        setStatusFilter(e.target.value)
+                      }
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="submitted">Submitted</option>
+                      <option value="under_review">Under Review</option>
+                      <option value="resolved">Resolved</option>
+                    </select>
+
+                    <select
+                      value={severityFilter}
+                      onChange={(e) =>
+                        setSeverityFilter(e.target.value)
+                      }
+                    >
+                      <option value="all">All Severities</option>
+                      <option value="1">Severity 1</option>
+                      <option value="2">Severity 2</option>
+                      <option value="3">Severity 3</option>
+                      <option value="4">Severity 4</option>
+                      <option value="5">Severity 5</option>
+                    </select>
+
+                  </div>
+
+                  <div className="table-wrapper">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Damage Type</th>
+                          <th>Severity</th>
+                          <th>Location</th>
+                          <th>Date</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {filteredReports.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="empty-state">
+                              No reports found.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredReports.map((report) => (
+                            <tr key={report.id}>
+                              <td>
+                                <strong>{report.damage_type}</strong>
+
+                                <small className="report-description">
+                                  {report.description}
+                                </small>
+                              </td>
+
+                              <td>
+                                <span
+                                  className="severity-badge"
+                                  style={{
+                                    color: severityColor(report.severity),
+                                  }}
+                                >
+                                  {report.severity}/5
+                                </span>
+                              </td>
+
+                              <td>
+                                {report.latitude.toFixed(4)},
+                                {" "}
+                                {report.longitude.toFixed(4)}
+                              </td>
+
+                              <td>{formatDate(report.created_at)}</td>
+
+                              <td>
+                                <select
+                                  className="status-select"
+                                  value={report.status}
+                                  onChange={(e) =>
+                                    updateStatus(
+                                      report.id,
+                                      e.target.value
+                                    )
+                                  }
+                                >
+                                  <option value="submitted">
+                                    Submitted
+                                  </option>
+
+                                  <option value="under_review">
+                                    Under Review
+                                  </option>
+
+                                  <option value="resolved">
+                                    Resolved
+                                  </option>
+                                </select>
+                              </td>
+
+                              <td>
+                                <button
+                                  className="delete-btn"
+                                  title="Delete report"
+                                  onClick={() =>
+                                    deleteReport(report.id)
+                                  }
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <p className="report-count">
+                    Showing {filteredReports.length} of {reports.length} reports
+                  </p>
+
+                </section>
+              </>
+            )}
+          </>
+        )}
+
+        {/* NEW REPORT PAGE */}
+
+        {activePage === "new-report" && (
+          <section className="form-section">
+
+            <div className="form-heading">
+              <h2>Submit Road Damage Report</h2>
+
+              <p>
+                Enter the damage details and its geographical location.
+              </p>
+            </div>
+
+            <form
+              className="report-form"
+              onSubmit={submitReport}
+            >
+
               <div className="form-group">
-                <label htmlFor="damage_type">Damage Type *</label>
+                <label>Damage Type *</label>
+
                 <select
-                  id="damage_type"
-                  name="damage_type"
                   value={form.damage_type}
-                  onChange={handleFormChange}
-                  required
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      damage_type: e.target.value,
+                    })
+                  }
                 >
-                  <option value="">Select damage type</option>
-                  <option value="Pothole">Pothole</option>
-                  <option value="Crack">Road Crack</option>
-                  <option value="Alligator Crack">Alligator Crack</option>
-                  <option value="Surface Damage">Surface Damage</option>
-                  <option value="Road Collapse">Road Collapse</option>
-                  <option value="Other">Other</option>
+                  <option>Pothole</option>
+                  <option>Crack</option>
+                  <option>Alligator Crack</option>
+                  <option>Surface Damage</option>
+                  <option>Road Collapse</option>
+                  <option>Other</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label htmlFor="description">Description *</label>
+                <label>Description *</label>
+
                 <textarea
-                  id="description"
-                  name="description"
-                  placeholder="Describe the road damage, its size, and any visible risks..."
-                  value={form.description}
-                  onChange={handleFormChange}
+                  placeholder="Describe the road damage..."
                   minLength={10}
                   maxLength={500}
-                  rows={5}
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      description: e.target.value,
+                    })
+                  }
                   required
                 />
-                <small>{form.description.length}/500 characters</small>
-              </div>
-
-              <div className="form-divider">
-                <MapPin size={18} />
-                <div>
-                  <strong>Location Details</strong>
-                  <p>Enter the GPS coordinates of the damaged road.</p>
-                </div>
               </div>
 
               <div className="form-grid">
+
                 <div className="form-group">
-                  <label htmlFor="latitude">Latitude *</label>
+                  <label>Latitude *</label>
+
                   <input
-                    id="latitude"
-                    name="latitude"
                     type="number"
                     step="any"
                     min="-90"
                     max="90"
-                    placeholder="Example: 28.6139"
+                    placeholder="28.6139"
                     value={form.latitude}
-                    onChange={handleFormChange}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        latitude: e.target.value,
+                      })
+                    }
                     required
                   />
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="longitude">Longitude *</label>
+                  <label>Longitude *</label>
+
                   <input
-                    id="longitude"
-                    name="longitude"
                     type="number"
                     step="any"
                     min="-180"
                     max="180"
-                    placeholder="Example: 77.2090"
+                    placeholder="77.2090"
                     value={form.longitude}
-                    onChange={handleFormChange}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        longitude: e.target.value,
+                      })
+                    }
                     required
                   />
                 </div>
+
               </div>
 
               <div className="form-group">
-                <label htmlFor="severity">Damage Severity *</label>
+                <label>Severity Level *</label>
+
                 <select
-                  id="severity"
-                  name="severity"
                   value={form.severity}
-                  onChange={handleFormChange}
-                  required
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      severity: e.target.value,
+                    })
+                  }
                 >
                   <option value="1">1 - Very Low</option>
                   <option value="2">2 - Low</option>
-                  <option value="3">3 - Medium</option>
+                  <option value="3">3 - Moderate</option>
                   <option value="4">4 - High</option>
                   <option value="5">5 - Critical</option>
                 </select>
-                <small>
-                  Select severity based on the visible condition and risk.
-                </small>
               </div>
 
               <div className="form-note">
                 <AlertTriangle size={17} />
-                <span>
-                  Please verify the location and description before submitting.
-                  Incorrect coordinates can affect report tracking.
-                </span>
+
+                Please ensure the geographical coordinates are accurate.
               </div>
 
               <div className="form-actions">
                 <button
                   type="button"
                   className="cancel-btn"
-                  onClick={() => {
-                    setForm(initialForm);
-                    setShowForm(false);
-                    setError("");
-                  }}
+                  onClick={() => setActivePage("dashboard")}
                 >
                   Cancel
                 </button>
@@ -535,199 +936,28 @@ function App() {
                   className="submit-btn"
                   disabled={submitting}
                 >
-                  <Send size={16} />
-                  {submitting ? "Submitting..." : "Submit Report"}
+                  {submitting
+                    ? "Submitting..."
+                    : "Submit Report"}
                 </button>
               </div>
+
             </form>
           </section>
-        ) : loading && !analytics ? (
-          <div className="loading">Loading dashboard...</div>
-        ) : analytics ? (
-          <>
-            <section className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-icon blue"><FileText /></div>
-                <p>Total Reports</p>
-                <h2>{analytics.total_reports ?? 0}</h2>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon orange"><Clock /></div>
-                <p>Submitted</p>
-                <h2>{analytics.status_summary?.submitted ?? 0}</h2>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon purple"><Activity /></div>
-                <p>Under Review</p>
-                <h2>{analytics.status_summary?.under_review ?? 0}</h2>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon green"><CheckCircle /></div>
-                <p>Resolved</p>
-                <h2>{analytics.status_summary?.resolved ?? 0}</h2>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon red"><AlertTriangle /></div>
-                <p>High Severity</p>
-                <h2>{highSeverity}</h2>
-              </div>
-            </section>
-
-            <section className="management-section">
-              <div className="section-heading">
-                <div>
-                  <h2>All Damage Reports</h2>
-                  <p>Manage and track reported infrastructure issues.</p>
-                </div>
-
-                <button
-                  className="add-report-btn"
-                  onClick={() => {
-                    setShowForm(true);
-                    setError("");
-                    setSuccess("");
-                  }}
-                >
-                  <Plus size={17} />
-                  New Report
-                </button>
-              </div>
-
-              <div className="filter-toolbar">
-                <div className="search-box">
-                  <Search size={18} />
-                  <input
-                    type="text"
-                    placeholder="Search reports..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
-
-                <select
-                  value={severityFilter}
-                  onChange={(e) => setSeverityFilter(e.target.value)}
-                >
-                  <option value="all">All Severities</option>
-                  <option value="1">Severity 1</option>
-                  <option value="2">Severity 2</option>
-                  <option value="3">Severity 3</option>
-                  <option value="4">Severity 4</option>
-                  <option value="5">Severity 5</option>
-                </select>
-
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="submitted">Submitted</option>
-                  <option value="under_review">Under Review</option>
-                  <option value="resolved">Resolved</option>
-                </select>
-              </div>
-
-              <div className="table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>REPORT</th>
-                      <th>LOCATION</th>
-                      <th>SEVERITY</th>
-                      <th>DATE</th>
-                      <th>STATUS</th>
-                      <th>ACTIONS</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {filteredReports.map((report) => (
-                      <tr key={report.id}>
-                        <td>
-                          <div className="report-name">
-                            <strong>{report.damage_type || "Unknown"}</strong>
-                            <span>{report.description || "No description"}</span>
-                            <small>ID: {report.id?.slice(0, 8) || "N/A"}</small>
-                          </div>
-                        </td>
-
-                        <td>
-                          <div className="location">
-                            <MapPin size={15} />
-                            <span>
-                              {Number(report.latitude).toFixed(4)},{" "}
-                              {Number(report.longitude).toFixed(4)}
-                            </span>
-                          </div>
-                        </td>
-
-                        <td>
-                          <span className={`severity-badge severity-${report.severity}`}>
-                            {getSeverityLabel(report.severity)} ({report.severity}/5)
-                          </span>
-                        </td>
-
-                        <td>{formatDate(report.created_at)}</td>
-
-                        <td>
-                          <select
-                            className={`status-select status-${report.status}`}
-                            value={report.status}
-                            disabled={updatingId === report.id}
-                            onChange={(e) =>
-                              updateStatus(
-                                report.id,
-                                e.target.value as Report["status"]
-                              )
-                            }
-                          >
-                            <option value="submitted">Submitted</option>
-                            <option value="under_review">Under Review</option>
-                            <option value="resolved">Resolved</option>
-                          </select>
-                        </td>
-
-                        <td>
-                          <button
-                            className="delete-btn"
-                            onClick={() => deleteReport(report.id)}
-                            disabled={
-                              deletingId === report.id ||
-                              updatingId === report.id
-                            }
-                            title="Delete report"
-                          >
-                            <Trash2 size={17} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-
-                    {filteredReports.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="empty-state">
-                          No reports found. Try changing your filters.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <footer className="footer">
-              InfraSentry AI · Intelligent Infrastructure Monitoring
-            </footer>
-          </>
-        ) : (
-          <div className="loading">
-            Analytics data is unavailable. Please refresh.
-          </div>
         )}
+
+        {/* IMAGE UPLOAD PAGE */}
+
+        {activePage === "image-upload" && (
+          <ImageUpload />
+        )}
+
+        <footer className="footer">
+          <p>
+            © 2026 InfraSentry AI. Infrastructure Intelligence Platform.
+          </p>
+        </footer>
+
       </main>
     </div>
   );
