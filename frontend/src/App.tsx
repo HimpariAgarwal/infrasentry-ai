@@ -1,19 +1,20 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
-  CheckCircle2,
-  Clock3,
-  FileText,
-  MapPin,
+  CheckCircle,
+  Clock,
+  Trash2,
   RefreshCw,
-  ShieldCheck,
-  TrendingUp,
+  Search,
+  Shield,
+  MapPin,
+  FileText,
 } from "lucide-react";
 import "./App.css";
 
-const API_URL = "http://127.0.0.1:8000";
+const API = "http://127.0.0.1:8000";
 
 type Report = {
   id: string;
@@ -22,390 +23,496 @@ type Report = {
   latitude: number;
   longitude: number;
   severity: number;
-  status: string;
+  status: "submitted" | "under_review" | "resolved";
   created_at: string;
 };
 
 type Analytics = {
   total_reports: number;
-  status_summary: Record<string, number>;
+  status_summary: {
+    submitted: number;
+    under_review: number;
+    resolved: number;
+  };
   severity_summary: Record<string, number>;
   average_severity: number;
   recent_reports: Report[];
 };
 
 function App() {
-  const [data, setData] = useState<Analytics | null>(null);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [severityFilter, setSeverityFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [updatingId, setUpdatingId] = useState("");
+  const [deletingId, setDeletingId] = useState("");
 
-  const fetchAnalytics = async () => {
+  // Load reports and analytics
+  async function loadDashboard() {
+    setLoading(true);
+    setError("");
+
     try {
-      setLoading(true);
-      setError("");
+      const [analyticsResponse, reportsResponse] = await Promise.all([
+        fetch(`${API}/analytics/summary`),
+        fetch(`${API}/reports`),
+      ]);
 
-      const response = await fetch(`${API_URL}/analytics/summary`);
-
-      if (!response.ok) {
-        throw new Error("Unable to fetch analytics data.");
+      if (!analyticsResponse.ok) {
+        throw new Error("Failed to load analytics.");
       }
 
-      const result: Analytics = await response.json();
-      setData(result);
+      if (!reportsResponse.ok) {
+        throw new Error("Failed to load reports.");
+      }
+
+      const analyticsData = await analyticsResponse.json();
+      const reportsData = await reportsResponse.json();
+
+      // Handle both array and object API responses
+      let reportList: Report[] = [];
+
+      if (Array.isArray(reportsData)) {
+        reportList = reportsData;
+      } else if (Array.isArray(reportsData?.reports)) {
+        reportList = reportsData.reports;
+      } else if (Array.isArray(reportsData?.items)) {
+        reportList = reportsData.items;
+      } else {
+        throw new Error(
+          "Unexpected reports API response. Check /reports in your browser."
+        );
+      }
+
+      setReports(reportList);
+      setAnalytics(analyticsData);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Something went wrong."
+          : "Something went wrong while loading data."
       );
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    fetchAnalytics();
+    loadDashboard();
   }, []);
 
-  const severityLabels = ["1", "2", "3", "4", "5"];
+  // Search and filter reports
+  const filteredReports = useMemo(() => {
+    return reports.filter((report) => {
+      const searchText = search.toLowerCase();
 
-  const statusLabels = [
-    { key: "submitted", label: "Submitted" },
-    { key: "under_review", label: "Under Review" },
-    { key: "resolved", label: "Resolved" },
-  ];
+      const matchesSearch =
+        (report.damage_type || "").toLowerCase().includes(searchText) ||
+        (report.description || "").toLowerCase().includes(searchText) ||
+        (report.id || "").toLowerCase().includes(searchText);
 
-  const getHighSeverity = () => {
-    if (!data) return 0;
+      const matchesSeverity =
+        severityFilter === "all" ||
+        String(report.severity) === severityFilter;
 
-    return (
-      (data.severity_summary["4"] || 0) +
-      (data.severity_summary["5"] || 0)
-    );
-  };
+      const matchesStatus =
+        statusFilter === "all" ||
+        report.status === statusFilter;
 
-  const getDate = (date: string) => {
-    return new Date(date).toLocaleString();
-  };
+      return matchesSearch && matchesSeverity && matchesStatus;
+    });
+  }, [reports, search, severityFilter, statusFilter]);
 
-  if (loading && !data) {
-    return (
-      <div className="loading-screen">
-        <Activity size={36} />
-        <h2>Loading InfraSentry AI...</h2>
-        <p>Connecting to infrastructure intelligence server</p>
-      </div>
-    );
+  // Update report status
+  async function updateStatus(
+    id: string,
+    newStatus: Report["status"]
+  ) {
+    setUpdatingId(id);
+    setError("");
+
+    try {
+      const response = await fetch(`${API}/reports/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: newStatus,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update report status.");
+      }
+
+      await loadDashboard();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Status update failed."
+      );
+    } finally {
+      setUpdatingId("");
+    }
   }
 
-  if (error && !data) {
-    return (
-      <div className="error-screen">
-        <AlertTriangle size={42} />
-        <h2>Connection failed</h2>
-        <p>{error}</p>
-        <button onClick={fetchAnalytics}>
-          <RefreshCw size={17} /> Retry
-        </button>
-      </div>
+  // Delete report
+  async function deleteReport(id: string) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this report?"
     );
+
+    if (!confirmed) return;
+
+    setDeletingId(id);
+    setError("");
+
+    try {
+      const response = await fetch(`${API}/reports/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete report.");
+      }
+
+      await loadDashboard();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Delete failed."
+      );
+    } finally {
+      setDeletingId("");
+    }
   }
 
-  if (!data) return null;
+  // Severity label
+  function getSeverityLabel(severity: number) {
+    if (severity >= 4) return "High";
+    if (severity === 3) return "Medium";
+    return "Low";
+  }
 
-  const cards = [
-    {
-      title: "Total Reports",
-      value: data.total_reports,
-      icon: FileText,
-      className: "blue",
-    },
-    {
-      title: "Under Review",
-      value: data.status_summary.under_review || 0,
-      icon: Clock3,
-      className: "orange",
-    },
-    {
-      title: "Resolved",
-      value: data.status_summary.resolved || 0,
-      icon: CheckCircle2,
-      className: "green",
-    },
-    {
-      title: "High Severity",
-      value: getHighSeverity(),
-      icon: AlertTriangle,
-      className: "red",
-    },
-  ];
+  // Format date
+  function formatDate(date: string) {
+    if (!date) return "N/A";
 
-  const maxSeverity = Math.max(
-    1,
-    ...severityLabels.map(
-      (level) => data.severity_summary[level] || 0
-    )
-  );
+    const parsedDate = new Date(date);
 
-  const maxStatus = Math.max(
-    1,
-    ...statusLabels.map(
-      (item) => data.status_summary[item.key] || 0
-    )
-  );
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "N/A";
+    }
+
+    return parsedDate.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  const highSeverity =
+    (analytics?.severity_summary?.["4"] || 0) +
+    (analytics?.severity_summary?.["5"] || 0);
 
   return (
-    <div className="app-container">
+    <div className="app">
+      {/* Sidebar */}
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-icon">
-            <ShieldCheck size={25} />
+            <Shield size={25} />
           </div>
+
           <div>
             <h2>InfraSentry</h2>
-            <span>AI Intelligence</span>
+            <span>AI Infrastructure Intelligence</span>
           </div>
         </div>
 
-        <div className="sidebar-label">MAIN MENU</div>
+        <nav className="navigation">
+          <div className="nav-item active">
+            <Activity size={19} />
+            Dashboard
+          </div>
 
-        <div className="nav-item active">
-          <Activity size={19} />
-          Dashboard
-        </div>
+          <div className="nav-item">
+            <FileText size={19} />
+            Reports
+          </div>
+        </nav>
 
-        <div className="sidebar-footer">
-          <div className="online-dot"></div>
-          System Connected
-          <span>API</span>
+        <div className="sidebar-bottom">
+          <div className="system-status">
+            <span className="status-dot"></span>
+            System Monitoring
+          </div>
+
+          <p>InfraSentry AI v1.0</p>
         </div>
       </aside>
 
+      {/* Main content */}
       <main className="main-content">
         <header className="topbar">
           <div>
-            <p className="breadcrumb">Workspace / Overview</p>
-            <h1>Infrastructure Dashboard</h1>
+            <p className="eyebrow">INFRASTRUCTURE MONITORING</p>
+            <h1>Report Management</h1>
             <p className="subtitle">
-              Monitor road damage reports and infrastructure health.
+              Monitor, manage and prioritize road damage reports.
             </p>
           </div>
 
           <button
-            className="refresh-button"
-            onClick={fetchAnalytics}
+            className="refresh-btn"
+            onClick={loadDashboard}
             disabled={loading}
           >
-            <RefreshCw
-              size={17}
-              className={loading ? "spinning" : ""}
-            />
-            Refresh Data
+            <RefreshCw size={16} />
+            Refresh
           </button>
         </header>
 
+        {/* Error message */}
         {error && (
-          <div className="inline-error">
-            {error} Please refresh to try again.
+          <div className="error-message">
+            <AlertTriangle size={18} />
+            {error}
           </div>
         )}
 
-        <section className="welcome-banner">
-          <div>
-            <span className="banner-tag">AI-POWERED MONITORING</span>
-            <h2>Infrastructure Intelligence Center</h2>
-            <p>
-              Track, analyze and manage road damage reports
-              from one centralized dashboard.
-            </p>
+        {/* Loading */}
+        {loading && !analytics ? (
+          <div className="loading">
+            Loading dashboard...
           </div>
-          <div className="banner-icon">
-            <TrendingUp size={58} />
-          </div>
-        </section>
+        ) : analytics ? (
+          <>
+            {/* Statistics */}
+            <section className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon blue">
+                  <FileText />
+                </div>
+                <p>Total Reports</p>
+                <h2>{analytics.total_reports ?? 0}</h2>
+              </div>
 
-        <section className="stats-grid">
-          {cards.map((card) => {
-            const Icon = card.icon;
+              <div className="stat-card">
+                <div className="stat-icon orange">
+                  <Clock />
+                </div>
+                <p>Submitted</p>
+                <h2>
+                  {analytics.status_summary?.submitted ?? 0}
+                </h2>
+              </div>
 
-            return (
-              <div className="stat-card" key={card.title}>
-                <div className={`stat-icon ${card.className}`}>
-                  <Icon size={22} />
+              <div className="stat-card">
+                <div className="stat-icon purple">
+                  <Activity />
+                </div>
+                <p>Under Review</p>
+                <h2>
+                  {analytics.status_summary?.under_review ?? 0}
+                </h2>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon green">
+                  <CheckCircle />
+                </div>
+                <p>Resolved</p>
+                <h2>
+                  {analytics.status_summary?.resolved ?? 0}
+                </h2>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon red">
+                  <AlertTriangle />
+                </div>
+                <p>High Severity</p>
+                <h2>{highSeverity}</h2>
+              </div>
+            </section>
+
+            {/* Report management */}
+            <section className="management-section">
+              <div className="section-heading">
+                <div>
+                  <h2>All Damage Reports</h2>
+                  <p>
+                    Manage and track reported infrastructure issues.
+                  </p>
                 </div>
 
-                <p>{card.title}</p>
-                <h2>{card.value}</h2>
-                <span>Live database value</span>
+                <span className="report-count">
+                  {filteredReports.length} Reports
+                </span>
               </div>
-            );
-          })}
-        </section>
 
-        <section className="charts-grid">
-          <div className="panel">
-            <div className="panel-heading">
-              <div>
-                <h3>Severity Distribution</h3>
-                <p>Reports grouped by damage severity</p>
+              {/* Search and filters */}
+              <div className="filter-toolbar">
+                <div className="search-box">
+                  <Search size={18} />
+
+                  <input
+                    type="text"
+                    placeholder="Search reports..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+
+                <select
+                  value={severityFilter}
+                  onChange={(e) =>
+                    setSeverityFilter(e.target.value)
+                  }
+                >
+                  <option value="all">All Severities</option>
+                  <option value="1">Severity 1</option>
+                  <option value="2">Severity 2</option>
+                  <option value="3">Severity 3</option>
+                  <option value="4">Severity 4</option>
+                  <option value="5">Severity 5</option>
+                </select>
+
+                <select
+                  value={statusFilter}
+                  onChange={(e) =>
+                    setStatusFilter(e.target.value)
+                  }
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="resolved">Resolved</option>
+                </select>
               </div>
-              <AlertTriangle size={21} />
-            </div>
 
-            <div className="bar-chart">
-              {severityLabels.map((level) => {
-                const count =
-                  data.severity_summary[level] || 0;
-
-                return (
-                  <div className="bar-column" key={level}>
-                    <span className="bar-value">{count}</span>
-
-                    <div className="bar-track">
-                      <div
-                        className={`bar-fill severity-${level}`}
-                        style={{
-                          height: `${(count / maxSeverity) * 100}%`,
-                        }}
-                      />
-                    </div>
-
-                    <span className="bar-label">
-                      Level {level}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <p className="chart-note">
-              Severity 1 = Low damage · Severity 5 = Critical damage
-            </p>
-          </div>
-
-          <div className="panel">
-            <div className="panel-heading">
-              <div>
-                <h3>Report Status</h3>
-                <p>Current report progress</p>
-              </div>
-              <Activity size={21} />
-            </div>
-
-            <div className="status-chart">
-              {statusLabels.map((item) => {
-                const count =
-                  data.status_summary[item.key] || 0;
-
-                return (
-                  <div className="status-row" key={item.key}>
-                    <div className="status-info">
-                      <span>{item.label}</span>
-                      <strong>{count}</strong>
-                    </div>
-
-                    <div className="status-track">
-                      <div
-                        className={`status-fill ${item.key}`}
-                        style={{
-                          width: `${(count / maxStatus) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="average-box">
-              <span>Average Damage Severity</span>
-              <strong>
-                {data.average_severity.toFixed(2)}
-                <small> / 5</small>
-              </strong>
-            </div>
-          </div>
-        </section>
-
-        <section className="panel recent-panel">
-          <div className="panel-heading">
-            <div>
-              <h3>Recent Damage Reports</h3>
-              <p>Latest five reports from your database</p>
-            </div>
-            <FileText size={21} />
-          </div>
-
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Damage Type</th>
-                  <th>Location</th>
-                  <th>Severity</th>
-                  <th>Status</th>
-                  <th>Reported At</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {data.recent_reports.length > 0 ? (
-                  data.recent_reports.map((report) => (
-                    <tr key={report.id}>
-                      <td>
-                        <strong>{report.damage_type}</strong>
-                        <small>{report.description}</small>
-                      </td>
-
-                      <td>
-                        <span className="location-cell">
-                          <MapPin size={14} />
-                          {report.latitude.toFixed(3)},{" "}
-                          {report.longitude.toFixed(3)}
-                        </span>
-                      </td>
-
-                      <td>
-                        <span
-                          className={`severity-badge level-${report.severity}`}
-                        >
-                          Level {report.severity}
-                        </span>
-                      </td>
-
-                      <td>
-                        <span
-                          className={`status-badge ${report.status}`}
-                        >
-                          {report.status.replace("_", " ")}
-                        </span>
-                      </td>
-
-                      <td className="date-cell">
-                        {getDate(report.created_at)}
-                      </td>
+              {/* Reports table */}
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>REPORT</th>
+                      <th>LOCATION</th>
+                      <th>SEVERITY</th>
+                      <th>DATE</th>
+                      <th>STATUS</th>
+                      <th>ACTIONS</th>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="empty-state">
-                      No reports found. Submit your first
-                      damage report to see it here.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                  </thead>
 
-        <footer className="dashboard-footer">
-          <span>
-            <ShieldCheck size={16} />
-            InfraSentry AI · Infrastructure Intelligence Platform
-          </span>
-          <span>Powered by FastAPI + PostgreSQL</span>
-        </footer>
+                  <tbody>
+                    {filteredReports.map((report) => (
+                      <tr key={report.id}>
+                        <td>
+                          <div className="report-name">
+                            <strong>
+                              {report.damage_type || "Unknown"}
+                            </strong>
+
+                            <span>
+                              {report.description || "No description"}
+                            </span>
+
+                            <small>
+                              ID: {report.id?.slice(0, 8) || "N/A"}
+                            </small>
+                          </div>
+                        </td>
+
+                        <td>
+                          <div className="location">
+                            <MapPin size={15} />
+
+                            <span>
+                              {Number(report.latitude).toFixed(4)},{" "}
+                              {Number(report.longitude).toFixed(4)}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td>
+                          <span
+                            className={`severity-badge severity-${report.severity}`}
+                          >
+                            {getSeverityLabel(report.severity)} (
+                            {report.severity}/5)
+                          </span>
+                        </td>
+
+                        <td>{formatDate(report.created_at)}</td>
+
+                        <td>
+                          <select
+                            className={`status-select status-${report.status}`}
+                            value={report.status}
+                            disabled={updatingId === report.id}
+                            onChange={(e) =>
+                              updateStatus(
+                                report.id,
+                                e.target.value as Report["status"]
+                              )
+                            }
+                          >
+                            <option value="submitted">
+                              Submitted
+                            </option>
+
+                            <option value="under_review">
+                              Under Review
+                            </option>
+
+                            <option value="resolved">
+                              Resolved
+                            </option>
+                          </select>
+                        </td>
+
+                        <td>
+                          <button
+                            className="delete-btn"
+                            onClick={() => deleteReport(report.id)}
+                            disabled={
+                              deletingId === report.id ||
+                              updatingId === report.id
+                            }
+                            title="Delete report"
+                          >
+                            <Trash2 size={17} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+
+                    {filteredReports.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="empty-state">
+                          No reports found. Try changing your filters.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <footer className="footer">
+              InfraSentry AI · Intelligent Infrastructure Monitoring
+            </footer>
+          </>
+        ) : (
+          <div className="loading">
+            Analytics data is unavailable. Please refresh.
+          </div>
+        )}
       </main>
     </div>
   );
