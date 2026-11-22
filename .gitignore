@@ -37,6 +37,21 @@ backend/uploads/
 backend/processed/
 
 # =====================================
+# RDD2022 DATASET
+# =====================================
+research/RDD2022/*.zip
+research/RDD2022/data/
+data/raw/
+data/processed/
+
+# =====================================
+# AI MODELS
+# =====================================
+*.pt
+*.pth
+*.onnx
+
+# =====================================
 # FRONTEND DEPENDENCIES
 # =====================================
 node_modules/
@@ -46,6 +61,7 @@ node_modules/
 # =====================================
 dist/
 build/
+frontend/dist/
 
 # =====================================
 # TYPESCRIPT
@@ -78,3 +94,10 @@ pnpm-debug.log*
 # =====================================
 *.tmp
 *.temp
+
+# =====================================
+# ROAD DAMAGE DETECTOR REFERENCE
+# =====================================
+research/RoadDamageDetector-master/*
+!research/RoadDamageDetector-master/README.md
+!research/RoadDamageDetector-master/LICENSE

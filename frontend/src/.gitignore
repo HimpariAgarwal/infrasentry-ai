@@ -1,26 +1,14 @@
+# Environment files
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
 
 # Python
-__pycache__/
-*.py[cod]
 .venv/
-venv/
-.env
+__pycache__/
+*.pyc
 
 # Node
 node_modules/
-frontend/dist/
-
-# AI models and datasets
-*.pt
-*.pth
-*.onnx
-data/raw/
-data/processed/
-
-# IDE
-.vscode/
-.idea/
-
-# System
-.DS_Store
-Thumbs.db
