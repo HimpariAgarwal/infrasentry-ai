@@ -6,16 +6,38 @@ import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from dataset_config import (
-    PROJECT_ROOT,
-    DATASET_ROOT,
-    PROCESSED_DIR,
-    IMAGE_EXTENSIONS,
-    DAMAGE_CLASSES,
-    COUNTRIES,
-    MANIFEST_FILE,
-    REPORT_FILE
-)
+try:
+    from .dataset_config import (
+        PROJECT_ROOT,
+        DATASET_ROOT,
+        PROCESSED_DIR,
+        IMAGE_EXTENSIONS,
+        DAMAGE_CLASSES,
+        EXTENDED_DAMAGE_CLASSES,
+        KNOWN_DAMAGE_CLASSES,
+        EXCLUDED_FROM_BASELINE_CLASSES,
+        UNRESOLVED_LABELS,
+        CLASS_TO_ID,
+        COUNTRIES,
+        MANIFEST_FILE,
+        REPORT_FILE,
+    )
+except ImportError:
+    from dataset_config import (
+        PROJECT_ROOT,
+        DATASET_ROOT,
+        PROCESSED_DIR,
+        IMAGE_EXTENSIONS,
+        DAMAGE_CLASSES,
+        EXTENDED_DAMAGE_CLASSES,
+        KNOWN_DAMAGE_CLASSES,
+        EXCLUDED_FROM_BASELINE_CLASSES,
+        UNRESOLVED_LABELS,
+        CLASS_TO_ID,
+        COUNTRIES,
+        MANIFEST_FILE,
+        REPORT_FILE,
+    )
 
 
 def find_country(path):
@@ -23,6 +45,7 @@ def find_country(path):
         for country in COUNTRIES:
             if part.lower() == country.lower():
                 return country
+
     return "Unknown"
 
 
@@ -30,6 +53,7 @@ def find_split(path):
     for part in path.parts:
         if part.lower() in {"train", "test"}:
             return part.lower()
+
     return "Unknown"
 
 
@@ -44,7 +68,12 @@ def build_image_indexes(image_files):
     return stem_index, filename_index
 
 
-def find_matching_image(xml_path, xml_root, stem_index, filename_index):
+def find_matching_image(
+    xml_path,
+    xml_root,
+    stem_index,
+    filename_index
+):
     # 1. Match XML and image in the same folder.
     same_folder = [
         image
@@ -55,25 +84,27 @@ def find_matching_image(xml_path, xml_root, stem_index, filename_index):
     if len(same_folder) == 1:
         return same_folder[0]
 
-    # 2. Match using the filename mentioned inside XML.
+    # 2. Match using the filename inside XML.
     filename = xml_root.findtext("filename")
 
     if filename:
-        candidate_name = Path(filename.strip().replace("\\", "/")).name
+        candidate_name = Path(
+            filename.strip().replace("\\", "/")
+        ).name
 
-        # First check the same folder.
         candidate = xml_path.parent / candidate_name
 
         if candidate.is_file():
             return candidate
 
-        # Then use the pre-built filename index.
-        matches = filename_index.get(candidate_name.lower(), [])
+        matches = filename_index.get(
+            candidate_name.lower(), []
+        )
 
         if len(matches) == 1:
             return matches[0]
 
-    # 3. Finally, try a unique matching filename stem.
+    # 3. Match using a unique filename stem.
     matches = stem_index.get(xml_path.stem.lower(), [])
 
     if len(matches) == 1:
@@ -131,10 +162,35 @@ def read_annotation(xml_root):
     return width, height, labels, invalid_boxes
 
 
+def classify_labels(labels):
+    baseline = [
+        label for label in labels
+        if label in DAMAGE_CLASSES
+    ]
+
+    extended = [
+        label for label in labels
+        if label in EXCLUDED_FROM_BASELINE_CLASSES
+    ]
+
+    unresolved = [
+        label for label in labels
+        if label in UNRESOLVED_LABELS
+    ]
+
+    unrecognized = [
+        label for label in labels
+        if label not in KNOWN_DAMAGE_CLASSES
+        and label not in UNRESOLVED_LABELS
+    ]
+
+    return baseline, extended, unresolved, unrecognized
+
+
 def main():
     print("\nINFRA SENTRY AI")
     print("RDD2022 DATASET VALIDATION")
-    print("-" * 45)
+    print("-" * 50)
 
     if not DATASET_ROOT.exists():
         print("Dataset folder not found!")
@@ -174,6 +230,7 @@ def main():
     print("\nMatching annotations...")
 
     class_counts = Counter()
+
     unmatched_annotations = []
     invalid_annotations = []
     manifest_rows = []
@@ -182,9 +239,14 @@ def main():
     total_objects = 0
     invalid_boxes_count = 0
 
+    baseline_object_count = 0
+    extended_object_count = 0
+    unresolved_object_count = 0
+    unrecognized_object_count = 0
+
     for number, xml_path in enumerate(xml_files, start=1):
         try:
-            # Parse each XML only once.
+            # Parse every XML only once.
             xml_root = ET.parse(xml_path).getroot()
 
             image_path = find_matching_image(
@@ -198,34 +260,58 @@ def main():
                 unmatched_annotations.append(str(xml_path))
                 continue
 
-            width, height, labels, invalid_boxes = read_annotation(xml_root)
+            width, height, labels, invalid_boxes = read_annotation(
+                xml_root
+            )
+
+            baseline, extended, unresolved, unrecognized = (
+                classify_labels(labels)
+            )
 
             matched_count += 1
             total_objects += len(labels)
             invalid_boxes_count += invalid_boxes
+
             class_counts.update(labels)
 
+            baseline_object_count += len(baseline)
+            extended_object_count += len(extended)
+            unresolved_object_count += len(unresolved)
+            unrecognized_object_count += len(unrecognized)
+
             manifest_rows.append({
-                "image_path": str(image_path.relative_to(PROJECT_ROOT)),
-                "annotation_path": str(xml_path.relative_to(PROJECT_ROOT)),
+                "image_path": str(
+                    image_path.relative_to(PROJECT_ROOT)
+                ),
+                "annotation_path": str(
+                    xml_path.relative_to(PROJECT_ROOT)
+                ),
                 "country": find_country(image_path),
                 "split": find_split(image_path),
                 "width": width,
                 "height": height,
                 "object_count": len(labels),
                 "labels": ";".join(labels),
-                "invalid_boxes": invalid_boxes
+                "baseline_labels": ";".join(baseline),
+                "extended_labels": ";".join(extended),
+                "unresolved_labels": ";".join(unresolved),
+                "unrecognized_labels": ";".join(unrecognized),
+                "invalid_boxes": invalid_boxes,
             })
 
         except (ET.ParseError, ValueError, OSError) as error:
             invalid_annotations.append({
                 "file": str(xml_path),
-                "error": str(error)
+                "error": str(error),
             })
 
         if number % 500 == 0:
-            print(f"Processed {number}/{len(xml_files)} annotations...")
+            print(
+                f"Processed {number}/{len(xml_files)} "
+                "annotations..."
+            )
 
+    # Generate manifest.
     fieldnames = [
         "image_path",
         "annotation_path",
@@ -235,7 +321,11 @@ def main():
         "height",
         "object_count",
         "labels",
-        "invalid_boxes"
+        "baseline_labels",
+        "extended_labels",
+        "unresolved_labels",
+        "unrecognized_labels",
+        "invalid_boxes",
     ]
 
     with open(
@@ -253,36 +343,78 @@ def main():
         writer.writeheader()
         writer.writerows(manifest_rows)
 
-    known_class_counts = {
+    # Separate class counts.
+    baseline_counts = {
         code: class_counts.get(code, 0)
         for code in DAMAGE_CLASSES
     }
 
-    unknown_classes = {
-        label: count
-        for label, count in class_counts.items()
-        if label not in DAMAGE_CLASSES
+    extended_counts = {
+        code: class_counts.get(code, 0)
+        for code in EXTENDED_DAMAGE_CLASSES
     }
 
+    unresolved_counts = {
+        code: class_counts.get(code, 0)
+        for code in UNRESOLVED_LABELS
+    }
+
+    unrecognized_counts = {
+        label: count
+        for label, count in class_counts.items()
+        if label not in KNOWN_DAMAGE_CLASSES
+        and label not in UNRESOLVED_LABELS
+    }
+
+    # Detailed validation report.
     report = {
         "dataset": "RDD2022",
         "dataset_root": str(DATASET_ROOT),
+
         "total_images": len(image_files),
         "total_xml_annotations": len(xml_files),
         "matched_annotations": matched_count,
         "unmatched_annotations": len(unmatched_annotations),
         "invalid_annotations": len(invalid_annotations),
+
         "total_damage_objects": total_objects,
         "invalid_bounding_boxes": invalid_boxes_count,
-        "damage_class_counts": known_class_counts,
-        "unknown_classes": unknown_classes,
+
+        "baseline_training_classes": {
+            "class_ids": CLASS_TO_ID,
+            "class_counts": baseline_counts,
+            "total_objects": baseline_object_count,
+        },
+
+        "extended_known_classes": {
+            "class_counts": extended_counts,
+            "total_objects": extended_object_count,
+        },
+
+        "unresolved_labels": {
+            "class_counts": unresolved_counts,
+            "total_objects": unresolved_object_count,
+        },
+
+        "unrecognized_labels": {
+            "class_counts": unrecognized_counts,
+            "total_objects": unrecognized_object_count,
+        },
+
+        "all_class_counts": dict(class_counts),
+
+        "unmatched_annotation_files": unmatched_annotations,
+
+        "invalid_annotation_details": invalid_annotations,
+
         "manifest_file": str(MANIFEST_FILE),
         "report_file": str(REPORT_FILE),
+
         "validation_status": (
             "completed"
             if matched_count > 0
             else "no_valid_annotations"
-        )
+        ),
     }
 
     with open(
@@ -290,10 +422,12 @@ def main():
         "w",
         encoding="utf-8"
     ) as json_file:
+
         json.dump(report, json_file, indent=4)
 
+    # Console results.
     print("\nVALIDATION RESULTS")
-    print("-" * 45)
+    print("-" * 50)
 
     print("Total images:", len(image_files))
     print("Total annotations:", len(xml_files))
@@ -303,13 +437,31 @@ def main():
     print("Total damage objects:", total_objects)
     print("Invalid bounding boxes:", invalid_boxes_count)
 
-    print("\nDAMAGE CLASS COUNTS")
+    print("\nFOUR-CLASS BASELINE")
 
     for code, name in DAMAGE_CLASSES.items():
-        print(f"{code} - {name}: {known_class_counts[code]}")
+        print(
+            f"{code} - {name}: "
+            f"{baseline_counts[code]}"
+        )
 
-    if unknown_classes:
-        print("\nUnknown classes:", unknown_classes)
+    print("\nADDITIONAL KNOWN CLASSES")
+
+    for code, name in EXTENDED_DAMAGE_CLASSES.items():
+        print(
+            f"{code} - {name}: "
+            f"{extended_counts[code]}"
+        )
+
+    print("\nUNRESOLVED LABELS:", unresolved_counts)
+
+    print("\nUNRECOGNIZED LABELS:", unrecognized_counts)
+
+    print("\nOBJECT CATEGORY TOTALS")
+    print("Baseline objects:", baseline_object_count)
+    print("Extended objects:", extended_object_count)
+    print("Unresolved objects:", unresolved_object_count)
+    print("Unrecognized objects:", unrecognized_object_count)
 
     print("\nManifest saved:", MANIFEST_FILE)
     print("Report saved:", REPORT_FILE)
