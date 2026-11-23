@@ -1,3 +1,4 @@
+from rate_limit import RateLimitMiddleware
 from logs_router import router as logs_router
 from api_logging import APILoggingMiddleware
 
@@ -143,6 +144,12 @@ app = FastAPI(
     title="InfraSentry AI API",
     description="AI-powered Road Infrastructure Intelligence Platform",
     version="1.0.0"
+)
+
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=120,
+    window_seconds=60,
 )
 app.include_router(logs_router)
 app.add_middleware(APILoggingMiddleware)
