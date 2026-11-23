@@ -7,14 +7,36 @@ from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from PIL import Image
 from ultralytics import YOLO
 
+try:
+    from backend.detection_history import (
+        initialize_history_database,
+        save_detection_record,
+        get_detection_records,
+        get_detection_record,
+        delete_detection_record
+    )
+except ModuleNotFoundError:
+    from detection_history import (
+        initialize_history_database,
+        save_detection_record,
+        get_detection_records,
+        get_detection_record,
+        delete_detection_record
+    )
+
 ROOT = Path(__file__).resolve().parents[1]
-MODEL_PATH = ROOT / "data" / "processed" / "yolo_runs" / "baseline_v1" / "weights" / "best.pt"
+MODEL_PATH = (
+    ROOT / "data" / "processed" / "yolo_runs" /
+    "baseline_v1" / "weights" / "best.pt"
+)
 
 router = APIRouter(prefix="/api/v1", tags=["AI Detection"])
 
 _model = None
 MAX_FILE_SIZE = 10 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+
+initialize_history_database()
 
 
 def get_model():
@@ -47,6 +69,7 @@ def run_detection(image_path: Path, confidence: float = 0.10):
 
     for box in result.boxes:
         class_id = int(box.cls[0].item())
+
         detections.append({
             "class_id": class_id,
             "damage_type": str(names[class_id]),
@@ -120,7 +143,7 @@ async def detect_road_damage(
 
         output = run_detection(temp_path, confidence)
 
-        return {
+        response = {
             "success": True,
             "filename": file.filename,
             "model": "YOLO26n",
@@ -136,6 +159,16 @@ async def detect_road_damage(
             )
         }
 
+        try:
+            response["history"] = save_detection_record(response)
+        except Exception as db_error:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Detection completed but history could not be saved: {str(db_error)}"
+            )
+
+        return response
+
     except HTTPException:
         raise
     except Exception as exc:
@@ -147,3 +180,57 @@ async def detect_road_damage(
         await file.close()
         if temp_path and temp_path.exists():
             os.unlink(temp_path)
+
+
+@router.get("/history")
+def detection_history(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0)
+):
+    try:
+        return get_detection_records(limit=limit, offset=offset)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not fetch detection history: {str(exc)}"
+        )
+
+
+@router.get("/history/{record_id}")
+def detection_history_detail(record_id: str):
+    try:
+        record = get_detection_record(record_id)
+
+        if not record:
+            raise HTTPException(
+                status_code=404,
+                detail="Detection history record not found."
+            )
+
+        return record
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
+@router.delete("/history/{record_id}")
+def remove_detection_history(record_id: str):
+    try:
+        deleted = delete_detection_record(record_id)
+
+        if not deleted:
+            raise HTTPException(
+                status_code=404,
+                detail="Detection history record not found."
+            )
+
+        return {
+            "success": True,
+            "message": "Detection history record deleted.",
+            "record_id": record_id
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
