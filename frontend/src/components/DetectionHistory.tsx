@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Clock,
   Database,
@@ -8,6 +8,9 @@ import {
   X,
   AlertCircle,
   CheckCircle,
+  Search,
+  Download,
+  Filter,
 } from "lucide-react";
 import "./DetectionHistory.css";
 
@@ -36,21 +39,26 @@ type HistoryRecord = {
 function getRecords(payload: any): HistoryRecord[] {
   if (Array.isArray(payload)) return payload;
 
-  const candidates = [
-    payload?.records,
-    payload?.items,
-    payload?.data,
-    payload?.history,
-  ];
+  for (const key of ["records", "items", "data", "history"]) {
+    if (Array.isArray(payload?.[key])) return payload[key];
+  }
 
-  return candidates.find(Array.isArray) ?? [];
+  return [];
 }
 
 function formatDate(value: string | null) {
   if (!value) return "N/A";
-
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "N/A" : date.toLocaleString();
+}
+
+function csvCell(value: unknown): string {
+  let text = String(value ?? "");
+
+  // Prevent spreadsheet formula injection.
+  if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
+
+  return `"${text.replace(/"/g, '""')}"`;
 }
 
 export default function DetectionHistory() {
@@ -62,24 +70,29 @@ export default function DetectionHistory() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [deletingId, setDeletingId] = useState("");
 
+  const [search, setSearch] = useState("");
+  const [modelFilter, setModelFilter] = useState("all");
+  const [detectionFilter, setDetectionFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
   const fetchHistory = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
-      const response = await fetch(`${API}/api/v1/history?limit=100&offset=0`);
+      const response = await fetch(
+        `${API}/api/v1/history?limit=100&offset=0`
+      );
 
       if (!response.ok) {
         throw new Error(`History API returned ${response.status}`);
       }
 
-      const payload = await response.json();
-      setRecords(getRecords(payload));
+      setRecords(getRecords(await response.json()));
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Could not load detection history."
+        err instanceof Error ? err.message : "Could not load detection history."
       );
     } finally {
       setLoading(false);
@@ -89,19 +102,78 @@ export default function DetectionHistory() {
   useEffect(() => {
     fetchHistory();
 
-    const refreshHandler = () => {
-      fetchHistory();
-    };
-
+    const refreshHandler = () => fetchHistory();
     window.addEventListener("infrasentry-history-refresh", refreshHandler);
 
     return () => {
-      window.removeEventListener(
-        "infrasentry-history-refresh",
-        refreshHandler
-      );
+      window.removeEventListener("infrasentry-history-refresh", refreshHandler);
     };
   }, [fetchHistory]);
+
+  const models = useMemo(
+    () => [...new Set(records.map((record) => record.model).filter(Boolean))],
+    [records]
+  );
+
+  const filteredRecords = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return records.filter((record) => {
+      const matchesSearch =
+        !query ||
+        record.filename?.toLowerCase().includes(query) ||
+        record.model?.toLowerCase().includes(query) ||
+        record.id?.toLowerCase().includes(query) ||
+        record.detections?.some((item) =>
+          item.damage_type?.toLowerCase().includes(query)
+        );
+
+      const matchesModel =
+        modelFilter === "all" || record.model === modelFilter;
+
+      const count = Number(record.detections_count || 0);
+      const matchesDetection =
+        detectionFilter === "all" ||
+        (detectionFilter === "detected" && count > 0) ||
+        (detectionFilter === "none" && count === 0);
+
+      const recordDate = record.created_at
+        ? new Date(record.created_at)
+        : null;
+
+      const matchesFrom =
+        !dateFrom ||
+        (recordDate !== null &&
+          !Number.isNaN(recordDate.getTime()) &&
+          recordDate >= new Date(`${dateFrom}T00:00:00`));
+
+      const matchesTo =
+        !dateTo ||
+        (recordDate !== null &&
+          !Number.isNaN(recordDate.getTime()) &&
+          recordDate <= new Date(`${dateTo}T23:59:59.999`));
+
+      return (
+        matchesSearch &&
+        matchesModel &&
+        matchesDetection &&
+        matchesFrom &&
+        matchesTo
+      );
+    });
+  }, [records, search, modelFilter, detectionFilter, dateFrom, dateTo]);
+
+  const totalDetections = records.reduce(
+    (total, item) => total + Number(item.detections_count || 0),
+    0
+  );
+
+  const averageInference = records.length
+    ? records.reduce(
+        (total, item) => total + Number(item.inference_time_ms || 0),
+        0
+      ) / records.length
+    : 0;
 
   async function viewDetails(id: string) {
     setDetailLoading(true);
@@ -142,7 +214,6 @@ export default function DetectionHistory() {
       }
 
       setRecords((current) => current.filter((item) => item.id !== id));
-
       if (selected?.id === id) setSelected(null);
 
       setSuccess("Detection history record deleted.");
@@ -155,17 +226,72 @@ export default function DetectionHistory() {
     }
   }
 
-  const totalDetections = records.reduce(
-    (total, item) => total + (item.detections_count || 0),
-    0
-  );
+  function exportCSV() {
+    if (filteredRecords.length === 0) {
+      setError("No records available to export.");
+      return;
+    }
 
-  const averageInference = records.length
-    ? records.reduce(
-        (total, item) => total + (item.inference_time_ms || 0),
-        0
-      ) / records.length
-    : 0;
+    const headers = [
+      "Record ID",
+      "Filename",
+      "Model",
+      "Image Width",
+      "Image Height",
+      "Detection Count",
+      "Confidence Threshold",
+      "Inference Time (ms)",
+      "Detected Classes",
+      "Created At",
+    ];
+
+    const rows = filteredRecords.map((record) => [
+      record.id,
+      record.filename,
+      record.model,
+      record.image_width,
+      record.image_height,
+      record.detections_count,
+      record.confidence_threshold,
+      record.inference_time_ms,
+      (record.detections ?? [])
+        .map((item) => item.damage_type ?? "Unknown")
+        .join("; "),
+      record.created_at,
+    ]);
+
+    const csv = [
+      headers.map(csvCell).join(","),
+      ...rows.map((row) => row.map(csvCell).join(",")),
+    ].join("\r\n");
+
+    const blob = new Blob(["\uFEFF" + csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `infrasentry_detection_history_${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    setSuccess(`${filteredRecords.length} records exported to CSV.`);
+    setError("");
+  }
+
+  function resetFilters() {
+    setSearch("");
+    setModelFilter("all");
+    setDetectionFilter("all");
+    setDateFrom("");
+    setDateTo("");
+  }
 
   return (
     <section className="history-page">
@@ -173,23 +299,35 @@ export default function DetectionHistory() {
         <div>
           <span className="history-eyebrow">AI MODEL RECORDS</span>
           <h2>Detection History</h2>
-          <p>Review and manage previously saved AI inference results.</p>
+          <p>Search, filter and export saved AI inference results.</p>
         </div>
 
-        <button
-          className="history-refresh"
-          onClick={fetchHistory}
-          disabled={loading}
-        >
-          <RefreshCw size={16} className={loading ? "history-spinning" : ""} />
-          {loading ? "Loading..." : "Refresh"}
-        </button>
+        <div className="history-heading-actions">
+          <button
+            className="history-export"
+            onClick={exportCSV}
+            disabled={filteredRecords.length === 0}
+          >
+            <Download size={16} />
+            Export CSV
+          </button>
+
+          <button
+            className="history-refresh"
+            onClick={fetchHistory}
+            disabled={loading}
+          >
+            <RefreshCw size={16} />
+            {loading ? "Loading..." : "Refresh"}
+          </button>
+        </div>
       </div>
 
       {error && (
         <div className="history-alert history-error">
           <AlertCircle size={17} />
           <span>{error}</span>
+          <button onClick={() => setError("")}>×</button>
         </div>
       )}
 
@@ -227,21 +365,97 @@ export default function DetectionHistory() {
         </div>
       </div>
 
+      <div className="history-filter-panel">
+        <div className="history-filter-title">
+          <Filter size={17} />
+          <strong>Search & Filters</strong>
+        </div>
+
+        <div className="history-filter-grid">
+          <label className="history-search-field">
+            <span>Search records</span>
+            <div>
+              <Search size={16} />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Filename, model, ID or damage class..."
+              />
+            </div>
+          </label>
+
+          <label>
+            <span>Model</span>
+            <select
+              value={modelFilter}
+              onChange={(event) => setModelFilter(event.target.value)}
+            >
+              <option value="all">All Models</option>
+              {models.map((model) => (
+                <option key={model} value={model}>{model}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span>Detection Result</span>
+            <select
+              value={detectionFilter}
+              onChange={(event) => setDetectionFilter(event.target.value)}
+            >
+              <option value="all">All Results</option>
+              <option value="detected">Objects Detected</option>
+              <option value="none">Zero Detections</option>
+            </select>
+          </label>
+
+          <label>
+            <span>From Date</span>
+            <input
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(event) => setDateFrom(event.target.value)}
+            />
+          </label>
+
+          <label>
+            <span>To Date</span>
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(event) => setDateTo(event.target.value)}
+            />
+          </label>
+
+          <button className="history-reset-btn" onClick={resetFilters}>
+            <X size={15} />
+            Clear Filters
+          </button>
+        </div>
+
+        <p className="history-filter-result">
+          Showing <strong>{filteredRecords.length}</strong> of{" "}
+          <strong>{records.length}</strong> records
+        </p>
+      </div>
+
       <div className="history-table-panel">
         <div className="history-table-heading">
           <div>
             <h3>Saved Inference Records</h3>
-            <p>{records.length} records loaded from the database</p>
+            <p>Records retrieved from the database</p>
           </div>
         </div>
 
         {loading ? (
           <div className="history-empty">Loading detection history...</div>
-        ) : records.length === 0 ? (
+        ) : filteredRecords.length === 0 ? (
           <div className="history-empty">
             <Database size={34} />
-            <strong>No detection history found</strong>
-            <span>Upload an image and run AI detection to create a record.</span>
+            <strong>No matching records found</strong>
+            <span>Try changing your search or filter settings.</span>
           </div>
         ) : (
           <div className="history-table-scroll">
@@ -259,38 +473,27 @@ export default function DetectionHistory() {
               </thead>
 
               <tbody>
-                {records.map((record) => (
+                {filteredRecords.map((record) => (
                   <tr key={record.id}>
                     <td>
                       <strong>{record.filename}</strong>
-                      <small>
-                        {record.image_width} × {record.image_height}
-                      </small>
+                      <small>{record.image_width} × {record.image_height}</small>
                     </td>
-
                     <td>
                       <span className="history-model">{record.model}</span>
                     </td>
-
                     <td>
                       <span className="history-count">
                         {record.detections_count}
                       </span>
                     </td>
-
                     <td>
                       {Number(record.inference_time_ms || 0).toFixed(1)} ms
                     </td>
-
                     <td>
-                      {(
-                        Number(record.confidence_threshold || 0) * 100
-                      ).toFixed(0)}
-                      %
+                      {(Number(record.confidence_threshold || 0) * 100).toFixed(0)}%
                     </td>
-
                     <td>{formatDate(record.created_at)}</td>
-
                     <td>
                       <div className="history-actions">
                         <button
@@ -301,7 +504,6 @@ export default function DetectionHistory() {
                         >
                           <Eye size={16} />
                         </button>
-
                         <button
                           className="history-delete-btn"
                           title="Delete record"
@@ -328,7 +530,6 @@ export default function DetectionHistory() {
                 <span className="history-eyebrow">RECORD DETAILS</span>
                 <h3>{selected.filename}</h3>
               </div>
-
               <button
                 className="history-close-btn"
                 onClick={() => setSelected(null)}
@@ -339,15 +540,10 @@ export default function DetectionHistory() {
             </div>
 
             <div className="history-detail-grid">
-              <div>
-                <span>Model</span>
-                <strong>{selected.model}</strong>
-              </div>
+              <div><span>Model</span><strong>{selected.model}</strong></div>
               <div>
                 <span>Image dimensions</span>
-                <strong>
-                  {selected.image_width} × {selected.image_height}
-                </strong>
+                <strong>{selected.image_width} × {selected.image_height}</strong>
               </div>
               <div>
                 <span>Detections</span>
@@ -355,15 +551,11 @@ export default function DetectionHistory() {
               </div>
               <div>
                 <span>Inference time</span>
-                <strong>
-                  {Number(selected.inference_time_ms || 0).toFixed(2)} ms
-                </strong>
+                <strong>{Number(selected.inference_time_ms || 0).toFixed(2)} ms</strong>
               </div>
               <div>
                 <span>Confidence threshold</span>
-                <strong>
-                  {(Number(selected.confidence_threshold || 0) * 100).toFixed(0)}%
-                </strong>
+                <strong>{(Number(selected.confidence_threshold || 0) * 100).toFixed(0)}%</strong>
               </div>
               <div>
                 <span>Created at</span>
@@ -383,12 +575,10 @@ export default function DetectionHistory() {
                   <div className="history-detection-item" key={index}>
                     <strong>{detection.damage_type ?? "Unknown"}</strong>
                     <span>
-                      Confidence:{" "}
-                      {(Number(detection.confidence || 0) * 100).toFixed(1)}%
+                      Confidence: {(Number(detection.confidence || 0) * 100).toFixed(1)}%
                     </span>
                     <small>
-                      Bounding box:{" "}
-                      {detection.bounding_box?.join(", ") ?? "N/A"}
+                      Bounding box: {detection.bounding_box?.join(", ") ?? "N/A"}
                     </small>
                   </div>
                 ))}

@@ -351,3 +351,153 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* DAY 25: HISTORY SEARCH, FILTER AND EXPORT */
+
+.history-heading-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.history-export,
+.history-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid #31527a;
+  border-radius: 8px;
+  background: #1b3657;
+  color: #b9d8ff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.history-export:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.history-filter-panel {
+  padding: 18px;
+  border: 1px solid #293449;
+  border-radius: 12px;
+  background: #111d2e;
+}
+
+.history-filter-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 16px;
+  color: #b9d8ff;
+  font-size: 14px;
+}
+
+.history-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.history-filter-grid label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.history-filter-grid label > span {
+  color: #98a8bd;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.history-filter-grid input,
+.history-filter-grid select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 39px;
+  padding: 8px 10px;
+  border: 1px solid #34445b;
+  border-radius: 7px;
+  outline: none;
+  background: #172438;
+  color: #e2eaf5;
+  font-size: 12px;
+}
+
+.history-filter-grid input:focus,
+.history-filter-grid select:focus {
+  border-color: #5797f5;
+}
+
+.history-search-field > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 39px;
+  padding: 0 10px;
+  border: 1px solid #34445b;
+  border-radius: 7px;
+  background: #172438;
+  color: #91a8c5;
+}
+
+.history-search-field > div:focus-within {
+  border-color: #5797f5;
+}
+
+.history-search-field input {
+  height: 35px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.history-search-field input:focus {
+  outline: none;
+}
+
+.history-reset-btn {
+  align-self: end;
+  height: 39px;
+  background: #202b3c;
+  border-color: #34445b;
+  color: #c0cada;
+}
+
+.history-filter-result {
+  margin: 14px 0 0;
+  color: #8d9bb0;
+  font-size: 11px;
+}
+
+.history-filter-result strong {
+  color: #e1eaf7;
+}
+
+@media (max-width: 900px) {
+  .history-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .history-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .history-heading {
+    flex-direction: column;
+  }
+
+  .history-heading-actions {
+    width: 100%;
+  }
+}
