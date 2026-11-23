@@ -92,6 +92,35 @@ export default function SystemHealth() {
     return () => window.clearInterval(timer);
   }, [fetchHealth]);
 
+
+  const exportHealthEvents = () => {
+    const headers = ["Time", "Severity", "Event"];
+    const rows = events.map(event => [
+      event.time,
+      event.level.toUpperCase(),
+      event.message
+    ]);
+
+    const csv = [headers, ...rows]
+      .map(row => row.map(value =>
+        `"${String(value).replace(/"/g, '""')}"`
+      ).join(","))
+      .join("\r\n");
+
+    const blob = new Blob(["\uFEFF" + csv], {
+      type: "text/csv;charset=utf-8;"
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `infrasentry-health-events-${new Date().toISOString().replace(/[:.]/g, "-")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
@@ -202,7 +231,14 @@ export default function SystemHealth() {
       <div className="health-detail-card health-events-card">
         <div className="health-events-heading">
           <h3><Activity size={19} /> Health Event Log</h3>
-          <button onClick={() => setEvents([])}><Trash2 size={15} /> Clear Log</button>
+          <div className="health-event-actions">
+            <button onClick={exportHealthEvents} disabled={events.length === 0}>
+              Export CSV
+            </button>
+            <button onClick={() => setEvents([])}>
+              <Trash2 size={15} /> Clear Log
+            </button>
+          </div>
         </div>
         {events.length === 0 ? (
           <p>No health events recorded yet.</p>

@@ -51,3 +51,11 @@
   .health-event-row { flex-wrap:wrap; }
   .health-event-time { margin-left:21px; }
 }
+.health-event-actions { display:flex; align-items:center; gap:8px; }
+.health-event-actions button { display:flex; align-items:center; gap:6px; border:1px solid var(--border-color,#444); border-radius:7px; padding:7px 10px; background:transparent; color:inherit; cursor:pointer; font-size:12px; }
+.health-event-actions button:disabled { opacity:.4; cursor:not-allowed; }
+.health-event-actions button:hover:not(:disabled) { background:rgba(100,116,139,.15); }
+@media(max-width:600px) {
+  .health-events-heading { align-items:flex-start; flex-direction:column; }
+  .health-event-actions { flex-wrap:wrap; }
+}
