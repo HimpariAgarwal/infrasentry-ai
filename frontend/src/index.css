@@ -109,3 +109,12 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+.auth-logout-button {
+  margin-left: auto;
+  padding: 8px 14px;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}

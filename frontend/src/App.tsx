@@ -1,3 +1,5 @@
+import { verifySession, clearToken } from "./services/authService";
+import Login from "./components/Login";
 import LogsViewer from "./components/LogsViewer";
 import SystemHealth from "./components/SystemHealth";
 import { useEffect, useState } from "react";
@@ -69,6 +71,29 @@ const emptyForm: ReportForm = {
 };
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    verifySession().then((valid) => {
+      if (active) {
+        setIsAuthenticated(valid);
+        setAuthChecking(false);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleLogout = () => {
+    clearToken();
+    setIsAuthenticated(false);
+  };
+
   const [reports, setReports] = useState<Report[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
 
@@ -411,6 +436,13 @@ function App() {
   // --------------------------------
 
   return (
+    authChecking ? (
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        Checking secure session...
+      </div>
+    ) : !isAuthenticated ? (
+      <Login onLogin={() => setIsAuthenticated(true)} />
+    ) : (
     <div className="app-container">
 
       <aside className="sidebar">
@@ -568,7 +600,8 @@ function App() {
             <RefreshCw size={16} />
             Refresh
           </button>
-        </header>
+        <button type="button" onClick={handleLogout} className="auth-logout-button">Sign out</button>
+</header>
 
         {error && (
           <div className="error-message">
@@ -701,9 +734,7 @@ function App() {
 
                         const maximum = Math.max(
                           1,
-                          ...Object.values(
-                            analytics?.severity_summary ?? {}
-                          )
+                          ...Object.values(analytics?.severity_summary ?? {})
                         );
 
                         return (
@@ -1140,6 +1171,7 @@ function App() {
     
 {activePage === "logs" && <LogsViewer />}
 </div>
+    )
   );
 }
 
