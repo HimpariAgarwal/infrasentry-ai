@@ -30,3 +30,24 @@
 @keyframes health-spin { to { transform: rotate(360deg); } }
 @media (max-width: 900px) { .health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .health-grid, .health-details-grid { grid-template-columns: 1fr; } }
+.health-alert-summary { display:flex; align-items:center; gap:18px; padding:16px; border:1px solid var(--border-color,#444); border-radius:12px; }
+.health-alert-summary div { display:flex; align-items:center; gap:9px; }
+.health-alert-summary strong { font-size:23px; }
+.health-alert-summary p { margin:0; opacity:.75; font-size:13px; }
+.health-alert-list { display:flex; flex-direction:column; gap:8px; }
+.health-alert-item { display:flex; align-items:center; gap:10px; padding:12px 15px; border-radius:8px; color:#d97706; background:rgba(217,119,6,.12); font-size:13px; }
+.health-events-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.health-events-heading h3 { display:flex; align-items:center; gap:8px; }
+.health-events-heading button { display:flex; align-items:center; gap:6px; border:1px solid var(--border-color,#444); border-radius:7px; padding:7px 10px; background:transparent; color:inherit; cursor:pointer; }
+.health-event-row { display:flex; align-items:center; gap:12px; padding:12px 2px; border-bottom:1px solid var(--border-color,#333); font-size:13px; }
+.health-event-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; background:#16a34a; }
+.health-event-dot.warning { background:#d97706; }
+.health-event-dot.critical { background:#dc2626; }
+.health-event-message { flex:1; }
+.health-event-time { opacity:.65; white-space:nowrap; }
+.health-event-note { font-size:11px; opacity:.6; margin-top:14px; }
+@media(max-width:600px) {
+  .health-alert-summary { align-items:flex-start; flex-direction:column; }
+  .health-event-row { flex-wrap:wrap; }
+  .health-event-time { margin-left:21px; }
+}

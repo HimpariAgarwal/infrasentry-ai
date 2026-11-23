@@ -1,9 +1,9 @@
-import "./SystemHealth.css";
 import { useCallback, useEffect, useState } from "react";
 import {
-  Activity, Cpu, Database, HardDrive, MemoryStick,
-  RefreshCw, Server, Clock, AlertTriangle, CheckCircle, XCircle
+  Activity, AlertTriangle, CheckCircle, Clock,
+  Database, RefreshCw, ShieldAlert, Trash2
 } from "lucide-react";
+import "./SystemHealth.css";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -18,24 +18,17 @@ interface HealthData {
     processor: string;
     cpu_percent: number;
     cpu_count: number;
-    memory: {
-      total_mb: number;
-      used_mb: number;
-      available_mb: number;
-      percent: number;
-    };
-    disk: {
-      total_gb: number;
-      used_gb: number;
-      free_gb: number;
-      percent: number;
-    };
+    memory: { total_mb: number; used_mb: number; available_mb: number; percent: number };
+    disk: { total_gb: number; used_gb: number; free_gb: number; percent: number };
   };
-  database: {
-    connected: boolean;
-    status: string;
-    error?: string;
-  };
+  database: { connected: boolean; status: string; error?: string };
+}
+
+interface HealthEvent {
+  id: string;
+  time: string;
+  level: "warning" | "critical" | "success";
+  message: string;
 }
 
 export default function SystemHealth() {
@@ -43,17 +36,51 @@ export default function SystemHealth() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState("");
+  const [events, setEvents] = useState<HealthEvent[]>([]);
 
   const fetchHealth = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE}/api/v1/system-health`);
       if (!response.ok) throw new Error(`API error: ${response.status}`);
+
       const result: HealthData = await response.json();
       setData(result);
       setError("");
       setLastUpdated(new Date().toLocaleTimeString());
+
+      const alerts: HealthEvent[] = [];
+      if (result.system.cpu_percent >= 80) {
+        alerts.push({ id: "cpu", time: new Date().toLocaleTimeString(), level: result.system.cpu_percent >= 95 ? "critical" : "warning", message: `High CPU usage: ${result.system.cpu_percent}%` });
+      }
+      if (result.system.memory.percent >= 85) {
+        alerts.push({ id: "memory", time: new Date().toLocaleTimeString(), level: result.system.memory.percent >= 95 ? "critical" : "warning", message: `High memory usage: ${result.system.memory.percent}%` });
+      }
+      if (result.system.disk.percent >= 90) {
+        alerts.push({ id: "disk", time: new Date().toLocaleTimeString(), level: "critical", message: `Critical disk usage: ${result.system.disk.percent}%` });
+      }
+      if (!result.database.connected) {
+        alerts.push({ id: "database", time: new Date().toLocaleTimeString(), level: "critical", message: "Database connection unavailable" });
+      }
+      if (alerts.length === 0) {
+        alerts.push({ id: "healthy", time: new Date().toLocaleTimeString(), level: "success", message: "System health check passed" });
+      }
+
+      setEvents(previous => {
+        const additions = alerts.filter(alert =>
+          !previous.length ||
+          previous[0].message !== alert.message ||
+          previous[0].level !== alert.level
+        );
+        return [...additions, ...previous].slice(0, 20);
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to connect to backend");
+      setError(err instanceof Error ? err.message : "Backend connection failed");
+      setEvents(previous => [{
+        id: "api-error",
+        time: new Date().toLocaleTimeString(),
+        level: "critical" as const,
+        message: "Backend health endpoint unavailable"
+      }, ...previous].slice(0, 20));
     } finally {
       setLoading(false);
     }
@@ -61,8 +88,8 @@ export default function SystemHealth() {
 
   useEffect(() => {
     fetchHealth();
-    const interval = window.setInterval(fetchHealth, 15000);
-    return () => window.clearInterval(interval);
+    const timer = window.setInterval(fetchHealth, 15000);
+    return () => window.clearInterval(timer);
   }, [fetchHealth]);
 
   const formatUptime = (seconds: number) => {
@@ -72,42 +99,19 @@ export default function SystemHealth() {
     return `${days}d ${hours}h ${minutes}m`;
   };
 
-  const Metric = ({
-    title, value, detail, icon: Icon, percent
-  }: {
-    title: string;
-    value: string;
-    detail: string;
-    icon: typeof Activity;
-    percent?: number;
-  }) => (
-    <div className="health-metric">
-      <div className="health-metric-heading">
-        <span>{title}</span>
-        <Icon size={20} />
-      </div>
-      <div className="health-metric-value">{value}</div>
-      <div className="health-metric-detail">{detail}</div>
-      {percent !== undefined && (
-        <div className="health-progress">
-          <div style={{ width: `${Math.min(100, Math.max(0, percent))}%` }} />
-        </div>
-      )}
-    </div>
-  );
+  const alerts = data ? [
+    ...(data.system.cpu_percent >= 80 ? [`CPU usage is high (${data.system.cpu_percent}%)`] : []),
+    ...(data.system.memory.percent >= 85 ? [`Memory usage is high (${data.system.memory.percent}%)`] : []),
+    ...(data.system.disk.percent >= 90 ? [`Disk usage is critical (${data.system.disk.percent}%)`] : []),
+    ...(!data.database.connected ? ["Database is disconnected"] : [])
+  ] : [];
 
   if (loading && !data) {
     return <div className="health-message"><RefreshCw className="health-spin" /> Loading system health...</div>;
   }
 
   if (!data) {
-    return (
-      <div className="health-message health-error">
-        <AlertTriangle size={24} />
-        <p>{error || "System health information unavailable."}</p>
-        <button onClick={fetchHealth}>Retry</button>
-      </div>
-    );
+    return <div className="health-message health-error"><AlertTriangle /> {error}<button onClick={fetchHealth}>Retry</button></div>;
   }
 
   return (
@@ -115,70 +119,101 @@ export default function SystemHealth() {
       <div className="health-topbar">
         <div>
           <h2>System Health Monitor</h2>
-          <p>Live infrastructure and resource monitoring</p>
+          <p>Infrastructure monitoring and resource alerts</p>
         </div>
-        <button className="health-refresh" onClick={fetchHealth}>
-          <RefreshCw size={16} /> Refresh
-        </button>
+        <button className="health-refresh" onClick={fetchHealth}><RefreshCw size={16} /> Refresh</button>
       </div>
 
       {error && <div className="health-warning"><AlertTriangle size={16} /> {error}</div>}
 
       <div className="health-status-card">
-        <div className="health-status-icon">
-          {data.status === "healthy" ? <CheckCircle size={26} /> : <AlertTriangle size={26} />}
-        </div>
+        {data.status === "healthy" ? <CheckCircle color="#16a34a" size={26} /> : <AlertTriangle color="#d97706" size={26} />}
         <div>
           <strong>Backend {data.status.toUpperCase()}</strong>
-          <p>Last updated: {lastUpdated || "Waiting..."}</p>
+          <p>Last updated: {lastUpdated}</p>
         </div>
-        <span className={`health-status-badge ${data.status}`}>
-          {data.status}
-        </span>
+        <span className={`health-status-badge ${data.status}`}>{data.status}</span>
       </div>
 
+      <div className="health-alert-summary">
+        <div>
+          <ShieldAlert size={22} />
+          <strong>{alerts.length}</strong>
+          <span>Active Alerts</span>
+        </div>
+        <p>{alerts.length ? "Attention required: check the alerts below." : "All monitored resources are within configured thresholds."}</p>
+      </div>
+
+      {alerts.length > 0 && (
+        <div className="health-alert-list">
+          {alerts.map((alert, index) => (
+            <div className="health-alert-item" key={index}>
+              <AlertTriangle size={17} />
+              {alert}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="health-grid">
-        <Metric title="CPU Usage" value={`${data.system.cpu_percent}%`}
-          detail={`${data.system.cpu_count} logical cores`} icon={Cpu}
-          percent={data.system.cpu_percent} />
-        <Metric title="Memory Usage" value={`${data.system.memory.percent}%`}
-          detail={`${data.system.memory.used_mb.toFixed(0)} / ${data.system.memory.total_mb.toFixed(0)} MB`}
-          icon={MemoryStick} percent={data.system.memory.percent} />
-        <Metric title="Disk Usage" value={`${data.system.disk.percent}%`}
-          detail={`${data.system.disk.used_gb} / ${data.system.disk.total_gb} GB`}
-          icon={HardDrive} percent={data.system.disk.percent} />
-        <Metric title="Backend Uptime" value={formatUptime(data.uptime_seconds)}
-          detail="Since backend startup" icon={Clock} />
+        <div className="health-metric">
+          <div className="health-metric-heading">CPU Usage <Activity size={19} /></div>
+          <div className="health-metric-value">{data.system.cpu_percent}%</div>
+          <div className="health-metric-detail">{data.system.cpu_count} logical cores</div>
+          <div className="health-progress"><div style={{ width: `${Math.min(100, data.system.cpu_percent)}%` }} /></div>
+        </div>
+        <div className="health-metric">
+          <div className="health-metric-heading">Memory Usage <Activity size={19} /></div>
+          <div className="health-metric-value">{data.system.memory.percent}%</div>
+          <div className="health-metric-detail">{data.system.memory.used_mb.toFixed(0)} / {data.system.memory.total_mb.toFixed(0)} MB</div>
+          <div className="health-progress"><div style={{ width: `${Math.min(100, data.system.memory.percent)}%` }} /></div>
+        </div>
+        <div className="health-metric">
+          <div className="health-metric-heading">Disk Usage <Activity size={19} /></div>
+          <div className="health-metric-value">{data.system.disk.percent}%</div>
+          <div className="health-metric-detail">{data.system.disk.used_gb} / {data.system.disk.total_gb} GB</div>
+          <div className="health-progress"><div style={{ width: `${Math.min(100, data.system.disk.percent)}%` }} /></div>
+        </div>
+        <div className="health-metric">
+          <div className="health-metric-heading">Backend Uptime <Clock size={19} /></div>
+          <div className="health-metric-value">{formatUptime(data.uptime_seconds)}</div>
+          <div className="health-metric-detail">Since backend startup</div>
+        </div>
       </div>
 
       <div className="health-details-grid">
         <div className="health-detail-card">
-          <h3><Server size={19} /> System Information</h3>
+          <h3>System Information</h3>
           <p><span>Operating System</span><strong>{data.system.platform} {data.system.platform_release}</strong></p>
           <p><span>Architecture</span><strong>{data.system.architecture}</strong></p>
           <p><span>Processor</span><strong>{data.system.processor}</strong></p>
-          <p><span>CPU Cores</span><strong>{data.system.cpu_count}</strong></p>
           <p><span>Available RAM</span><strong>{data.system.memory.available_mb.toFixed(0)} MB</strong></p>
           <p><span>Free Disk</span><strong>{data.system.disk.free_gb} GB</strong></p>
         </div>
-
         <div className="health-detail-card">
-          <h3><Database size={19} /> Service Status</h3>
-          <p>
-            <span>Backend API</span>
-            <strong className="health-connected"><CheckCircle size={15} /> Connected</strong>
-          </p>
-          <p>
-            <span>Database</span>
-            <strong className={data.database.connected ? "health-connected" : "health-disconnected"}>
-              {data.database.connected ? <CheckCircle size={15} /> : <XCircle size={15} />}
-              {data.database.status}
-            </strong>
-          </p>
-          {data.database.error && <p className="health-db-error">{data.database.error}</p>}
-          <p><span>Monitoring</span><strong><Activity size={15} /> Active</strong></p>
+          <h3><Database size={18} /> Service Status</h3>
+          <p><span>Backend API</span><strong className="health-connected">Connected</strong></p>
+          <p><span>Database</span><strong className={data.database.connected ? "health-connected" : "health-disconnected"}>{data.database.status}</strong></p>
+          <p><span>Monitoring</span><strong>Active</strong></p>
           <p><span>Refresh Interval</span><strong>15 seconds</strong></p>
         </div>
+      </div>
+
+      <div className="health-detail-card health-events-card">
+        <div className="health-events-heading">
+          <h3><Activity size={19} /> Health Event Log</h3>
+          <button onClick={() => setEvents([])}><Trash2 size={15} /> Clear Log</button>
+        </div>
+        {events.length === 0 ? (
+          <p>No health events recorded yet.</p>
+        ) : events.map((event, index) => (
+          <div className="health-event-row" key={`${event.id}-${index}-${event.time}`}>
+            <span className={`health-event-dot ${event.level}`} />
+            <span className="health-event-message">{event.message}</span>
+            <span className="health-event-time">{event.time}</span>
+          </div>
+        ))}
+        <p className="health-event-note">Latest 20 checks · Automatically updated every 15 seconds · Session-only history</p>
       </div>
     </section>
   );
