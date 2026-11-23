@@ -136,11 +136,13 @@ class DamageReportUpdate(BaseModel):
 # 5. FASTAPI APPLICATION
 # --------------------------------------------------
 
+from system_router import router as system_router
 app = FastAPI(
     title="InfraSentry AI API",
     description="AI-powered Road Infrastructure Intelligence Platform",
     version="1.0.0"
 )
+app.include_router(system_router)
 
 
 # CORS configuration
