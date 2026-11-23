@@ -326,6 +326,67 @@ function App() {
   });
 
   // --------------------------------
+  // EXPORT FILTERED REPORTS TO CSV
+  // --------------------------------
+
+  function exportReports() {
+    if (filteredReports.length === 0) {
+      setError("No reports available to export.");
+      return;
+    }
+
+    const headers = [
+      "Report ID",
+      "Damage Type",
+      "Description",
+      "Latitude",
+      "Longitude",
+      "Severity",
+      "Status",
+      "Created At",
+    ];
+
+    const escapeCSV = (value: unknown) =>
+      `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+    const rows = filteredReports.map((report) => [
+      report.id,
+      report.damage_type,
+      report.description,
+      report.latitude,
+      report.longitude,
+      report.severity,
+      report.status,
+      report.created_at ?? "",
+    ]);
+
+    const csv = [
+      headers.map(escapeCSV).join(","),
+      ...rows.map((row) => row.map(escapeCSV).join(",")),
+    ].join("\r\n");
+
+    const blob = new Blob(["\uFEFF", csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `infrasentry-reports-${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    setSuccess(`${filteredReports.length} reports exported successfully.`);
+    setError("");
+  }
+
+  // --------------------------------
   // HELPERS
   // --------------------------------
 
@@ -689,12 +750,22 @@ function App() {
                       </p>
                     </div>
 
-                    <button
-                      className="add-report-btn"
-                      onClick={() => setActivePage("new-report")}
-                    >
-                      + New Report
-                    </button>
+                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                      <button
+                        className="add-report-btn"
+                        onClick={exportReports}
+                        disabled={filteredReports.length === 0}
+                      >
+                        Export CSV
+                      </button>
+
+                      <button
+                        className="add-report-btn"
+                        onClick={() => setActivePage("new-report")}
+                      >
+                        + New Report
+                      </button>
+                    </div>
                   </div>
 
                   <div className="filters">
