@@ -1,3 +1,4 @@
+import SystemHealth from "./components/SystemHealth";
 import { useEffect, useState } from "react";
 import {
   Activity,
@@ -11,7 +12,7 @@ import {
   Search,
   Trash2,
   Upload,
-  XCircle,
+  XCircle
 } from "lucide-react";
 
 import ImageUpload from "./ImageUpload";
@@ -62,7 +63,7 @@ const emptyForm: ReportForm = {
   description: "",
   latitude: "",
   longitude: "",
-  severity: "3",
+  severity: "3"
 };
 
 function App() {
@@ -78,8 +79,7 @@ function App() {
   const [severityFilter, setSeverityFilter] = useState("all");
 
   const [activePage, setActivePage] = useState<
-    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health" | "reports-analytics" | "road-map" | "performance"
-  >("dashboard");
+    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health" | "reports-analytics" | "road-map" | "performance" | "system-health" >("dashboard");
 
   const [form, setForm] = useState<ReportForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -208,16 +208,16 @@ function App() {
       const response = await fetch(`${API}/reports`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-        },
+          "Content-Type": "application/json"
+},
         body: JSON.stringify({
           damage_type: form.damage_type,
           description: form.description.trim(),
           latitude,
           longitude,
-          severity,
-        }),
-      });
+          severity
+})
+});
 
       const data = await response.json();
 
@@ -251,10 +251,10 @@ function App() {
       const response = await fetch(`${API}/reports/${id}`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status }),
-      });
+          "Content-Type": "application/json"
+},
+        body: JSON.stringify({ status })
+});
 
       const data = await response.json();
 
@@ -287,8 +287,8 @@ function App() {
 
     try {
       const response = await fetch(`${API}/reports/${id}`, {
-        method: "DELETE",
-      });
+        method: "DELETE"
+});
 
       const data = await response.json();
 
@@ -368,8 +368,8 @@ function App() {
     ].join("\r\n");
 
     const blob = new Blob(["\uFEFF", csv], {
-      type: "text/csv;charset=utf-8;",
-    });
+      type: "text/csv;charset=utf-8;"
+});
 
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -514,7 +514,8 @@ function App() {
           Performance Monitor
         </button>
 
-        <div className="sidebar-bottom">
+        <button className="nav-item" onClick={() => setActivePage("system-health")}><Activity size={18} /> <span>System Health</span></button>
+<div className="sidebar-bottom">
           <div className="system-status">
             <span className="status-dot"></span>
             System Active
@@ -525,6 +526,8 @@ function App() {
       </aside>
 
       <main className="main-content">
+{ activePage === "system-health" && <SystemHealth /> }
+
 
         <header className="top-header">
           <div>
@@ -711,8 +714,8 @@ function App() {
                                 className="severity-bar"
                                 style={{
                                   height: `${(count / maximum) * 100}%`,
-                                  background: severityColor(level),
-                                }}
+                                  background: severityColor(level)
+}}
                               />
                             </div>
 
@@ -735,20 +738,20 @@ function App() {
                         label: "Submitted",
                         value:
                           analytics?.status_summary?.submitted ?? 0,
-                        color: "#3b82f6",
-                      },
+                        color: "#3b82f6"
+},
                       {
                         label: "Under Review",
                         value:
                           analytics?.status_summary?.under_review ?? 0,
-                        color: "#e59a26",
-                      },
+                        color: "#e59a26"
+},
                       {
                         label: "Resolved",
                         value:
                           analytics?.status_summary?.resolved ?? 0,
-                        color: "#269b69",
-                      },
+                        color: "#269b69"
+},
                     ].map((item) => {
                       const total = analytics?.total_reports ?? 0;
 
@@ -772,8 +775,8 @@ function App() {
                               className="status-fill"
                               style={{
                                 width: `${percentage}%`,
-                                background: item.color,
-                              }}
+                                background: item.color
+}}
                             />
                           </div>
                         </div>
@@ -895,8 +898,8 @@ function App() {
                                 <span
                                   className="severity-badge"
                                   style={{
-                                    color: severityColor(report.severity),
-                                  }}
+                                    color: severityColor(report.severity)
+}}
                                 >
                                   {report.severity}/5
                                 </span>
@@ -989,8 +992,8 @@ function App() {
                   onChange={(e) =>
                     setForm({
                       ...form,
-                      damage_type: e.target.value,
-                    })
+                      damage_type: e.target.value
+})
                   }
                 >
                   <option>Pothole</option>
@@ -1013,8 +1016,8 @@ function App() {
                   onChange={(e) =>
                     setForm({
                       ...form,
-                      description: e.target.value,
-                    })
+                      description: e.target.value
+})
                   }
                   required
                 />
@@ -1035,8 +1038,8 @@ function App() {
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        latitude: e.target.value,
-                      })
+                        latitude: e.target.value
+})
                     }
                     required
                   />
@@ -1055,8 +1058,8 @@ function App() {
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        longitude: e.target.value,
-                      })
+                        longitude: e.target.value
+})
                     }
                     required
                   />
@@ -1072,8 +1075,8 @@ function App() {
                   onChange={(e) =>
                     setForm({
                       ...form,
-                      severity: e.target.value,
-                    })
+                      severity: e.target.value
+})
                   }
                 >
                   <option value="1">1 - Very Low</option>
