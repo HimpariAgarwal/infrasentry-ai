@@ -534,3 +534,11 @@ def analytics_summary():
 
     finally:
         db.close()
+
+# InfraSentry AI - YOLO detection API
+try:
+    from backend.ai_router import router as ai_router
+except ModuleNotFoundError:
+    from ai_router import router as ai_router
+
+app.include_router(ai_router)
