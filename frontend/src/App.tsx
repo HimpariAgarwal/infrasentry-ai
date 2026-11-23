@@ -1,4 +1,4 @@
-﻿
+
 import { useEffect, useState } from "react";
 import {
   Activity,
@@ -7,6 +7,7 @@ import {
   Clock,
   FilePlus2,
   LayoutDashboard,
+  History as HistoryIcon,
   RefreshCw,
   Search,
   Trash2,
@@ -17,6 +18,7 @@ import {
 import ImageUpload from "./ImageUpload";
 import DetectionPanel from "./components/DetectionPanel";
 import BenchmarkAnalytics from "./components/BenchmarkAnalytics";
+import DetectionHistory from "./components/DetectionHistory";
 import "./App.css";
 
 const API = "http://127.0.0.1:8000";
@@ -73,7 +75,7 @@ function App() {
   const [severityFilter, setSeverityFilter] = useState("all");
 
   const [activePage, setActivePage] = useState<
-    "dashboard" | "new-report" | "image-upload" | "ai-analytics"
+    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history"
   >("dashboard");
 
   const [form, setForm] = useState<ReportForm>(emptyForm);
@@ -398,6 +400,16 @@ function App() {
           <Activity size={18} />
           AI Analytics
         </button>
+        <button
+          className={`nav-item ${
+            activePage === "detection-history" ? "active" : ""
+          }`}
+          onClick={() => setActivePage("detection-history")}
+        >
+          <HistoryIcon size={18} />
+          Detection History
+        </button>
+
         <div className="sidebar-bottom">
           <div className="system-status">
             <span className="status-dot"></span>
@@ -417,7 +429,7 @@ function App() {
                 ? "Infrastructure Dashboard"
                 : activePage === "new-report"
                   ? "Create New Report"
-                  : activePage === "ai-analytics" ? "AI Performance Analytics" : "Image Upload"}
+                  : activePage === "ai-analytics" ? "AI Performance Analytics" : activePage === "detection-history" ? "Detection History" : "Image Upload"}
             </h1>
 
             <p>
@@ -427,7 +439,7 @@ function App() {
 
           <button
             className="refresh-button"
-            onClick={loadDashboard}
+            onClick={() => activePage === "detection-history" ? window.dispatchEvent(new Event("infrasentry-history-refresh")) : loadDashboard()}
             disabled={loading}
           >
             <RefreshCw size={16} />
@@ -450,6 +462,9 @@ function App() {
             <button onClick={() => setSuccess("")}>Ã—</button>
           </div>
         )}
+
+        {/* DETECTION HISTORY PAGE */}
+        {activePage === "detection-history" && <DetectionHistory />}
 
         {/* DASHBOARD PAGE */}
 
