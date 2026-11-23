@@ -1,90 +1,179 @@
 ﻿import { useEffect, useState } from "react";
 import type { PerformanceMetric } from "../services/performanceMonitor";
 
+declare global {
+  interface Window {
+    __infrasentryPerformance?: PerformanceMetric[];
+  }
+}
+
 function PerformanceDashboard() {
   const [metrics, setMetrics] = useState<PerformanceMetric[]>([]);
   const [filter, setFilter] = useState("all");
 
+  const refreshMetrics = () => {
+    setMetrics([...(window.__infrasentryPerformance ?? [])]);
+  };
+
   useEffect(() => {
-    const loadMetrics = () => {
-      setMetrics([...(window.__infrasentryPerformance ?? [])]);
-    };
+    refreshMetrics();
 
-    loadMetrics();
-
-    const handleMetric = () => loadMetrics();
+    const handleMetric = () => refreshMetrics();
 
     window.addEventListener("infrasentry:performance", handleMetric);
+
     return () => {
       window.removeEventListener("infrasentry:performance", handleMetric);
     };
   }, []);
 
   const apiMetrics = metrics.filter(
-    (metric) => metric.type === "api-request" || metric.type === "api-error"
+    (m) => m.type === "api-request" || m.type === "api-error"
   );
 
-  const successful = apiMetrics.filter((metric) => metric.success);
-  const failed = apiMetrics.filter((metric) => !metric.success);
+  const successful = apiMetrics.filter((m) => m.success);
+  const failed = apiMetrics.filter((m) => !m.success);
 
   const average = apiMetrics.length
-    ? apiMetrics.reduce((sum, metric) => sum + metric.durationMs, 0) /
-      apiMetrics.length
+    ? apiMetrics.reduce((sum, m) => sum + m.durationMs, 0) / apiMetrics.length
     : 0;
 
-  const slowest = [...apiMetrics].sort(
-    (a, b) => b.durationMs - a.durationMs
-  ).slice(0, 5);
+  const pageLoads = metrics.filter((m) => m.type === "page-load");
 
-  const pageLoads = metrics.filter((metric) => metric.type === "page-load");
-
-  const visibleMetrics = metrics.filter((metric) => {
-    if (filter === "api") {
-      return metric.type === "api-request" || metric.type === "api-error";
-    }
-    if (filter === "errors") return !metric.success;
-    if (filter === "page") return metric.type === "page-load";
+  const filteredMetrics = metrics.filter((m) => {
+    if (filter === "api") return m.type === "api-request" || m.type === "api-error";
+    if (filter === "errors") return !m.success;
+    if (filter === "page") return m.type === "page-load";
     return true;
   }).slice().reverse();
 
-  const cardStyle = {
-    background: "var(--card-bg, #ffffff)",
-    border: "1px solid var(--border-color, #e5e7eb)",
-    borderRadius: "12px",
+  const cardStyle: React.CSSProperties = {
     padding: "20px",
+    borderRadius: "12px",
+    border: "1px solid var(--border-color, #e5e7eb)",
+    background: "var(--card-bg, #ffffff)",
     minWidth: 0,
   };
 
-  const muted = { color: "var(--text-secondary, #64748b)" };
+  const muted: React.CSSProperties = {
+    color: "var(--text-secondary, #64748b)",
+  };
+
+  const exportCSV = () => {
+    if (!metrics.length) {
+      alert("No performance metrics available to export.");
+      return;
+    }
+
+    const headers = [
+      "Type",
+      "Name",
+      "Duration (ms)",
+      "Timestamp",
+      "Status",
+      "Success",
+      "Details",
+    ];
+
+    const escapeCSV = (value: unknown) =>
+      `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+    const rows = metrics.map((m) => [
+      m.type,
+      m.name,
+      m.durationMs,
+      m.timestamp,
+      m.status ?? "",
+      m.success,
+      m.details ?? "",
+    ]);
+
+    const csv = [
+      headers.map(escapeCSV).join(","),
+      ...rows.map((row) => row.map(escapeCSV).join(",")),
+    ].join("\r\n");
+
+    const blob = new Blob(["\uFEFF", csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `infrasentry-performance-${new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const clearMetrics = () => {
+    if (!window.confirm("Clear all performance metrics from this browser session?")) {
+      return;
+    }
+
+    window.__infrasentryPerformance = [];
+    refreshMetrics();
+  };
+
+  const slowest = [...apiMetrics]
+    .sort((a, b) => b.durationMs - a.durationMs)
+    .slice(0, 5);
 
   return (
     <div style={{ display: "grid", gap: "22px" }}>
-      <div>
-        <h2 style={{ margin: 0 }}>Performance Monitoring</h2>
-        <p style={muted}>
-          Live frontend and API performance metrics collected in this browser session.
-        </p>
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: "12px",
+      }}>
+        <div>
+          <h2 style={{ margin: 0 }}>Performance Monitoring</h2>
+          <p style={muted}>
+            Application performance and API diagnostics.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <button onClick={refreshMetrics}>Refresh</button>
+          <button onClick={exportCSV} disabled={!metrics.length}>
+            Export CSV
+          </button>
+          <button onClick={clearMetrics} disabled={!metrics.length}>
+            Clear Metrics
+          </button>
+        </div>
       </div>
 
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-        gap: "14px"
+        gridTemplateColumns: "repeat(auto-fit, minmax(165px, 1fr))",
+        gap: "14px",
       }}>
         <div style={cardStyle}>
-          <p style={muted}>Total API Requests</p>
+          <p style={muted}>Total Events</p>
+          <h2>{metrics.length}</h2>
+        </div>
+        <div style={cardStyle}>
+          <p style={muted}>API Requests</p>
           <h2>{apiMetrics.length}</h2>
         </div>
         <div style={cardStyle}>
-          <p style={muted}>Successful Requests</p>
+          <p style={muted}>Successful</p>
           <h2 style={{ color: "#16a34a" }}>{successful.length}</h2>
         </div>
         <div style={cardStyle}>
-          <p style={muted}>Failed Requests</p>
+          <p style={muted}>Failed</p>
           <h2 style={{ color: "#dc2626" }}>{failed.length}</h2>
         </div>
         <div style={cardStyle}>
-          <p style={muted}>Average API Duration</p>
+          <p style={muted}>Average API Time</p>
           <h2>{average.toFixed(2)} ms</h2>
         </div>
         <div style={cardStyle}>
@@ -95,25 +184,26 @@ function PerformanceDashboard() {
 
       <section style={cardStyle}>
         <h3>Slowest API Requests</h3>
+
         {slowest.length === 0 ? (
-          <p style={muted}>No API requests recorded yet. Visit Detection History or Model Health to generate metrics.</p>
+          <p style={muted}>No API request data recorded yet.</p>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+            <table style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
                   <th style={{ padding: "10px" }}>Request</th>
                   <th style={{ padding: "10px" }}>Duration</th>
-                  <th style={{ padding: "10px" }}>Status</th>
+                  <th style={{ padding: "10px" }}>Result</th>
                 </tr>
               </thead>
               <tbody>
-                {slowest.map((metric, index) => (
-                  <tr key={`${metric.timestamp}-${index}`}>
-                    <td style={{ padding: "10px", overflowWrap: "anywhere" }}>{metric.name}</td>
-                    <td style={{ padding: "10px" }}>{metric.durationMs.toFixed(2)} ms</td>
-                    <td style={{ padding: "10px", color: metric.success ? "#16a34a" : "#dc2626" }}>
-                      {metric.status ?? (metric.success ? "Success" : "Failed")}
+                {slowest.map((m, i) => (
+                  <tr key={`${m.timestamp}-${i}`}>
+                    <td style={{ padding: "10px", overflowWrap: "anywhere" }}>{m.name}</td>
+                    <td style={{ padding: "10px" }}>{m.durationMs.toFixed(2)} ms</td>
+                    <td style={{ padding: "10px", color: m.success ? "#16a34a" : "#dc2626" }}>
+                      {m.status ?? (m.success ? "Success" : "Failed")}
                     </td>
                   </tr>
                 ))}
@@ -129,12 +219,13 @@ function PerformanceDashboard() {
           justifyContent: "space-between",
           alignItems: "center",
           flexWrap: "wrap",
-          gap: "12px"
+          gap: "12px",
         }}>
-          <h3>Recent Performance Events</h3>
+          <h3>Performance Event History</h3>
+
           <select
             value={filter}
-            onChange={(event) => setFilter(event.target.value)}
+            onChange={(e) => setFilter(e.target.value)}
             style={{ padding: "9px", borderRadius: "8px" }}
           >
             <option value="all">All Events</option>
@@ -144,31 +235,31 @@ function PerformanceDashboard() {
           </select>
         </div>
 
-        {visibleMetrics.length === 0 ? (
-          <p style={muted}>No performance events match this filter.</p>
+        {filteredMetrics.length === 0 ? (
+          <p style={muted}>No events available for this filter.</p>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+            <table style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
                   <th style={{ padding: "10px" }}>Type</th>
                   <th style={{ padding: "10px" }}>Name</th>
                   <th style={{ padding: "10px" }}>Duration</th>
                   <th style={{ padding: "10px" }}>Result</th>
-                  <th style={{ padding: "10px" }}>Time</th>
+                  <th style={{ padding: "10px" }}>Timestamp</th>
                 </tr>
               </thead>
               <tbody>
-                {visibleMetrics.map((metric, index) => (
-                  <tr key={`${metric.timestamp}-${index}`}>
-                    <td style={{ padding: "10px" }}>{metric.type}</td>
-                    <td style={{ padding: "10px", overflowWrap: "anywhere" }}>{metric.name}</td>
-                    <td style={{ padding: "10px" }}>{metric.durationMs.toFixed(2)} ms</td>
-                    <td style={{ padding: "10px", color: metric.success ? "#16a34a" : "#dc2626" }}>
-                      {metric.success ? "Success" : "Failed"}
+                {filteredMetrics.map((m, i) => (
+                  <tr key={`${m.timestamp}-${i}`}>
+                    <td style={{ padding: "10px" }}>{m.type}</td>
+                    <td style={{ padding: "10px", overflowWrap: "anywhere" }}>{m.name}</td>
+                    <td style={{ padding: "10px" }}>{m.durationMs.toFixed(2)} ms</td>
+                    <td style={{ padding: "10px", color: m.success ? "#16a34a" : "#dc2626" }}>
+                      {m.success ? "Success" : "Failed"}
                     </td>
                     <td style={{ padding: "10px", whiteSpace: "nowrap" }}>
-                      {new Date(metric.timestamp).toLocaleTimeString()}
+                      {new Date(m.timestamp).toLocaleString()}
                     </td>
                   </tr>
                 ))}
@@ -179,9 +270,8 @@ function PerformanceDashboard() {
       </section>
 
       <p style={{ ...muted, fontSize: "12px" }}>
-        Metrics are collected locally in browser memory (maximum 200 events).
-        They reset when the page is reloaded. This dashboard measures observed
-        request timing, not backend server processing time alone.
+        Metrics are held in browser memory, with a maximum of 200 events.
+        Export your report before reloading or clearing the session.
       </p>
     </div>
   );
