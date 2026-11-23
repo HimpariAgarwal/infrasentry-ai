@@ -16,6 +16,7 @@ import {
 
 import ImageUpload from "./ImageUpload";
 import DetectionPanel from "./components/DetectionPanel";
+import BenchmarkAnalytics from "./components/BenchmarkAnalytics";
 import "./App.css";
 
 const API = "http://127.0.0.1:8000";
@@ -72,7 +73,7 @@ function App() {
   const [severityFilter, setSeverityFilter] = useState("all");
 
   const [activePage, setActivePage] = useState<
-    "dashboard" | "new-report" | "image-upload"
+    "dashboard" | "new-report" | "image-upload" | "ai-analytics"
   >("dashboard");
 
   const [form, setForm] = useState<ReportForm>(emptyForm);
@@ -388,6 +389,15 @@ function App() {
           Image Upload
         </button>
 
+        <button
+          className={`nav-item ${
+            activePage === "ai-analytics" ? "active" : ""
+          }`}
+          onClick={() => setActivePage("ai-analytics")}
+        >
+          <Activity size={18} />
+          AI Analytics
+        </button>
         <div className="sidebar-bottom">
           <div className="system-status">
             <span className="status-dot"></span>
@@ -407,7 +417,7 @@ function App() {
                 ? "Infrastructure Dashboard"
                 : activePage === "new-report"
                   ? "Create New Report"
-                  : "Image Upload"}
+                  : activePage === "ai-analytics" ? "AI Performance Analytics" : "Image Upload"}
             </h1>
 
             <p>
@@ -953,6 +963,9 @@ function App() {
           <><ImageUpload /><DetectionPanel /></>
         )}
 
+        {activePage === "ai-analytics" && (
+          <BenchmarkAnalytics />
+        )}
         <footer className="footer">
           <p>
             Â© 2026 InfraSentry AI. Infrastructure Intelligence Platform.
@@ -965,5 +978,6 @@ function App() {
 }
 
 export default App;
+
 
 

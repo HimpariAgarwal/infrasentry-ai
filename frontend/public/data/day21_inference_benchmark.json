@@ -1,0 +1,227 @@
+{
+  "project": "InfraSentry AI",
+  "benchmark_date_utc": "2026-11-23T10:40:34.357516+00:00",
+  "benchmark_type": "Inference performance only; not an accuracy evaluation",
+  "images_attempted": 25,
+  "images_succeeded": 25,
+  "images_failed": 0,
+  "total_detections": 5,
+  "images_with_detections": 4,
+  "images_without_detections": 21,
+  "average_inference_time_ms": 163.0,
+  "median_inference_time_ms": 51.7,
+  "maximum_inference_time_ms": 2787.03,
+  "minimum_inference_time_ms": 41.88,
+  "results": [
+    {
+      "image": "India_000000.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 2787.03,
+      "detections": []
+    },
+    {
+      "image": "India_000012.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 87.22,
+      "detections": []
+    },
+    {
+      "image": "India_000024.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 52.59,
+      "detections": []
+    },
+    {
+      "image": "India_000039.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 46.19,
+      "detections": []
+    },
+    {
+      "image": "India_000046.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 46.56,
+      "detections": []
+    },
+    {
+      "image": "India_000047.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 45.82,
+      "detections": []
+    },
+    {
+      "image": "India_000049.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 48.75,
+      "detections": []
+    },
+    {
+      "image": "India_000071.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 52.24,
+      "detections": []
+    },
+    {
+      "image": "India_000073.jpg",
+      "detections_count": 1,
+      "inference_time_ms": 62.95,
+      "detections": [
+        {
+          "class_id": 0,
+          "damage_type": "Longitudinal Crack",
+          "confidence": 0.246,
+          "bounding_box": [
+            379.11,
+            454.99,
+            424.34,
+            631.16
+          ]
+        }
+      ]
+    },
+    {
+      "image": "India_000086.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 52.18,
+      "detections": []
+    },
+    {
+      "image": "India_000095.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 41.88,
+      "detections": []
+    },
+    {
+      "image": "India_000096.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 47.48,
+      "detections": []
+    },
+    {
+      "image": "India_000101.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 46.02,
+      "detections": []
+    },
+    {
+      "image": "India_000103.jpg",
+      "detections_count": 1,
+      "inference_time_ms": 50.21,
+      "detections": [
+        {
+          "class_id": 0,
+          "damage_type": "Longitudinal Crack",
+          "confidence": 0.1646,
+          "bounding_box": [
+            414.23,
+            492.34,
+            445.42,
+            628.22
+          ]
+        }
+      ]
+    },
+    {
+      "image": "India_000108.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 48.48,
+      "detections": []
+    },
+    {
+      "image": "India_000111.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 44.52,
+      "detections": []
+    },
+    {
+      "image": "India_000116.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 45.73,
+      "detections": []
+    },
+    {
+      "image": "India_000119.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 45.37,
+      "detections": []
+    },
+    {
+      "image": "India_000125.jpg",
+      "detections_count": 2,
+      "inference_time_ms": 52.19,
+      "detections": [
+        {
+          "class_id": 0,
+          "damage_type": "Longitudinal Crack",
+          "confidence": 0.146,
+          "bounding_box": [
+            242.25,
+            545.35,
+            302.44,
+            664.34
+          ]
+        },
+        {
+          "class_id": 0,
+          "damage_type": "Longitudinal Crack",
+          "confidence": 0.1008,
+          "bounding_box": [
+            191.31,
+            531.66,
+            311.95,
+            671.52
+          ]
+        }
+      ]
+    },
+    {
+      "image": "India_000129.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 51.7,
+      "detections": []
+    },
+    {
+      "image": "India_000134.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 63.09,
+      "detections": []
+    },
+    {
+      "image": "India_000140.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 64.74,
+      "detections": []
+    },
+    {
+      "image": "India_000165.jpg",
+      "detections_count": 1,
+      "inference_time_ms": 70.7,
+      "detections": [
+        {
+          "class_id": 0,
+          "damage_type": "Longitudinal Crack",
+          "confidence": 0.1906,
+          "bounding_box": [
+            464.34,
+            462.01,
+            519.78,
+            621.69
+          ]
+        }
+      ]
+    },
+    {
+      "image": "India_000168.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 62.15,
+      "detections": []
+    },
+    {
+      "image": "India_000175.jpg",
+      "detections_count": 0,
+      "inference_time_ms": 59.18,
+      "detections": []
+    }
+  ],
+  "errors": []
+}
