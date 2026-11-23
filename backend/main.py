@@ -1,3 +1,4 @@
+from api_logging import APILoggingMiddleware
 
 import os
 from pathlib import Path
@@ -142,6 +143,7 @@ app = FastAPI(
     description="AI-powered Road Infrastructure Intelligence Platform",
     version="1.0.0"
 )
+app.add_middleware(APILoggingMiddleware)
 app.include_router(system_router)
 
 
