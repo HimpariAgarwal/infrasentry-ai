@@ -21,6 +21,7 @@ import DetectionHistory from "./components/DetectionHistory";
 import ModelHealth from "./components/ModelHealth";
 import ReportsAnalytics from "./components/ReportsAnalytics";
 import RoadDamageMap from "./components/RoadDamageMap";
+import PerformanceDashboard from "./components/PerformanceDashboard";
 import "./App.css";
 
 const API = "http://127.0.0.1:8000";
@@ -77,7 +78,7 @@ function App() {
   const [severityFilter, setSeverityFilter] = useState("all");
 
   const [activePage, setActivePage] = useState<
-    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health" | "reports-analytics" | "road-map"
+    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health" | "reports-analytics" | "road-map" | "performance"
   >("dashboard");
 
   const [form, setForm] = useState<ReportForm>(emptyForm);
@@ -503,6 +504,16 @@ function App() {
           Damage Map
         </button>
 
+        <button
+          className={`nav-item ${
+            activePage === "performance" ? "active" : ""
+          }`}
+          onClick={() => setActivePage("performance")}
+        >
+          <Activity size={18} />
+          Performance Monitor
+        </button>
+
         <div className="sidebar-bottom">
           <div className="system-status">
             <span className="status-dot"></span>
@@ -530,7 +541,9 @@ function App() {
                       ? "AI Model Health"
                       : activePage === "reports-analytics"
                         ? "Reports Analytics"
-                        : activePage === "road-map"
+                        : activePage === "performance"
+                        ? "Performance Monitoring"
+: activePage === "road-map"
                           ? "Road Damage Map"
                           : "Image Upload"}
             </h1>
@@ -581,6 +594,9 @@ function App() {
         {activePage === "road-map" && (
           <RoadDamageMap reports={reports} />
         )}
+
+        {/* PERFORMANCE MONITORING PAGE */}
+        {activePage === "performance" && <PerformanceDashboard />}
 
         {/* DASHBOARD PAGE */}
 
