@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Clock,
   Database,
@@ -75,6 +75,9 @@ export default function DetectionHistory() {
   const [detectionFilter, setDetectionFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
+  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
@@ -162,6 +165,57 @@ export default function DetectionHistory() {
       );
     });
   }, [records, search, modelFilter, detectionFilter, dateFrom, dateTo]);
+
+  const sortedRecords = useMemo(() => {
+    const result = [...filteredRecords];
+
+    result.sort((a, b) => {
+      if (sortBy === "oldest") {
+        return new Date(a.created_at ?? 0).getTime() -
+          new Date(b.created_at ?? 0).getTime();
+      }
+
+      if (sortBy === "fastest") {
+        return Number(a.inference_time_ms || 0) -
+          Number(b.inference_time_ms || 0);
+      }
+
+      if (sortBy === "slowest") {
+        return Number(b.inference_time_ms || 0) -
+          Number(a.inference_time_ms || 0);
+      }
+
+      if (sortBy === "most-detections") {
+        return Number(b.detections_count || 0) -
+          Number(a.detections_count || 0);
+      }
+
+      if (sortBy === "least-detections") {
+        return Number(a.detections_count || 0) -
+          Number(b.detections_count || 0);
+      }
+
+      return new Date(b.created_at ?? 0).getTime() -
+        new Date(a.created_at ?? 0).getTime();
+    });
+
+    return result;
+  }, [filteredRecords, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedRecords.length / pageSize));
+
+  const paginatedRecords = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedRecords.slice(start, start + pageSize);
+  }, [sortedRecords, currentPage, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, modelFilter, detectionFilter, dateFrom, dateTo, sortBy, pageSize]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   const totalDetections = records.reduce(
     (total, item) => total + Number(item.detections_count || 0),
@@ -410,6 +464,34 @@ export default function DetectionHistory() {
           </label>
 
           <label>
+            <span>Sort Records</span>
+            <select
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value)}
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="fastest">Fastest Inference</option>
+              <option value="slowest">Slowest Inference</option>
+              <option value="most-detections">Most Detections</option>
+              <option value="least-detections">Least Detections</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Rows Per Page</span>
+            <select
+              value={pageSize}
+              onChange={(event) => setPageSize(Number(event.target.value))}
+            >
+              <option value={5}>5 records</option>
+              <option value={10}>10 records</option>
+              <option value={20}>20 records</option>
+              <option value={50}>50 records</option>
+            </select>
+          </label>
+
+          <label>
             <span>From Date</span>
             <input
               type="date"
@@ -436,7 +518,7 @@ export default function DetectionHistory() {
         </div>
 
         <p className="history-filter-result">
-          Showing <strong>{filteredRecords.length}</strong> of{" "}
+          Showing <strong>{sortedRecords.length}</strong> of{" "}
           <strong>{records.length}</strong> records
         </p>
       </div>
@@ -473,7 +555,7 @@ export default function DetectionHistory() {
               </thead>
 
               <tbody>
-                {filteredRecords.map((record) => (
+                {paginatedRecords.map((record) => (
                   <tr key={record.id}>
                     <td>
                       <strong>{record.filename}</strong>
@@ -521,6 +603,46 @@ export default function DetectionHistory() {
           </div>
         )}
       </div>
+
+      {!loading && sortedRecords.length > 0 && (
+        <div className="history-pagination">
+          <span>
+            Showing {(currentPage - 1) * pageSize + 1}?
+            {Math.min(currentPage * pageSize, sortedRecords.length)} of{" "}
+            {sortedRecords.length}
+          </span>
+
+          <div className="history-pagination-controls">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+            >
+              First
+            </button>
+            <button
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </button>
+
+            <strong>Page {currentPage} / {totalPages}</strong>
+
+            <button
+              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+            >
+              Last
+            </button>
+          </div>
+        </div>
+      )}
 
       {selected && (
         <div className="history-detail-overlay">

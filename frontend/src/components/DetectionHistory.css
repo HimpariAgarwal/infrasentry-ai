@@ -501,3 +501,58 @@
     width: 100%;
   }
 }
+
+/* DAY 26: SORTING AND PAGINATION */
+
+.history-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 15px 18px;
+  border: 1px solid #293449;
+  border-radius: 10px;
+  background: #111d2e;
+  color: #9ba9bd;
+  font-size: 12px;
+}
+
+.history-pagination-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.history-pagination-controls button {
+  padding: 8px 11px;
+  border: 1px solid #34445b;
+  border-radius: 6px;
+  background: #172438;
+  color: #dce6f5;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.history-pagination-controls button:hover:not(:disabled) {
+  border-color: #5797f5;
+  color: #8dbbff;
+}
+
+.history-pagination-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.history-pagination-controls strong {
+  padding: 0 6px;
+  color: #dce6f5;
+}
+
+@media (max-width: 600px) {
+  .history-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
