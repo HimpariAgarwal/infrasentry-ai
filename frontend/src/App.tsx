@@ -1,3 +1,4 @@
+import LogsViewer from "./components/LogsViewer";
 import SystemHealth from "./components/SystemHealth";
 import { useEffect, useState } from "react";
 import {
@@ -12,7 +13,8 @@ import {
   Search,
   Trash2,
   Upload,
-  XCircle
+  XCircle,
+  FileText
 } from "lucide-react";
 
 import ImageUpload from "./ImageUpload";
@@ -79,7 +81,7 @@ function App() {
   const [severityFilter, setSeverityFilter] = useState("all");
 
   const [activePage, setActivePage] = useState<
-    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health" | "reports-analytics" | "road-map" | "performance" | "system-health" >("dashboard");
+    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health" | "reports-analytics" | "road-map" | "performance" | "system-health"  | "logs">("dashboard");
 
   const [form, setForm] = useState<ReportForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -515,6 +517,7 @@ function App() {
         </button>
 
         <button className="nav-item" onClick={() => setActivePage("system-health")}><Activity size={18} /> <span>System Health</span></button>
+<button className="nav-item" onClick={() => setActivePage("logs")}><FileText size={18} /> <span>API Logs</span></button>
 <div className="sidebar-bottom">
           <div className="system-status">
             <span className="status-dot"></span>
@@ -526,7 +529,8 @@ function App() {
       </aside>
 
       <main className="main-content">
-{ activePage === "system-health" && <SystemHealth /> }
+{ activePage === "system-health" && <SystemHealth />
+ }
 
 
         <header className="top-header">
@@ -1133,7 +1137,9 @@ function App() {
         </footer>
 
       </main>
-    </div>
+    
+{activePage === "logs" && <LogsViewer />}
+</div>
   );
 }
 
