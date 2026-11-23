@@ -1,3 +1,4 @@
+from security_headers import SecurityHeadersMiddleware
 from rate_limit import RateLimitMiddleware
 from logs_router import router as logs_router
 from api_logging import APILoggingMiddleware
@@ -145,6 +146,8 @@ app = FastAPI(
     description="AI-powered Road Infrastructure Intelligence Platform",
     version="1.0.0"
 )
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     RateLimitMiddleware,
