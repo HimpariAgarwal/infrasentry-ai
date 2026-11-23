@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import {
   Activity,
@@ -20,7 +19,6 @@ import DetectionPanel from "./components/DetectionPanel";
 import BenchmarkAnalytics from "./components/BenchmarkAnalytics";
 import DetectionHistory from "./components/DetectionHistory";
 import ModelHealth from "./components/ModelHealth";
-import ReportsAnalytics from "./components/ReportsAnalytics";
 import "./App.css";
 
 const API = "http://127.0.0.1:8000";
@@ -77,7 +75,7 @@ function App() {
   const [severityFilter, setSeverityFilter] = useState("all");
 
   const [activePage, setActivePage] = useState<
-    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health" | "reports-analytics"
+    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health"
   >("dashboard");
 
   const [form, setForm] = useState<ReportForm>(emptyForm);
@@ -483,16 +481,6 @@ function App() {
           Model Health
         </button>
 
-        <button
-          className={`nav-item ${
-            activePage === "reports-analytics" ? "active" : ""
-          }`}
-          onClick={() => setActivePage("reports-analytics")}
-        >
-          <Activity size={18} />
-          Reports Analytics
-        </button>
-
         <div className="sidebar-bottom">
           <div className="system-status">
             <span className="status-dot"></span>
@@ -518,9 +506,7 @@ function App() {
                     ? "Detection History"
                     : activePage === "model-health"
                       ? "AI Model Health"
-                      : activePage === "reports-analytics"
-                        ? "Reports Analytics"
-                        : "Image Upload"}
+                      : "Image Upload"}
             </h1>
 
             <p>
@@ -559,11 +545,6 @@ function App() {
 
         {/* MODEL HEALTH PAGE */}
         {activePage === "model-health" && <ModelHealth />}
-
-        {/* REPORTS ANALYTICS PAGE */}
-        {activePage === "reports-analytics" && (
-          <ReportsAnalytics reports={reports} />
-        )}
 
         {/* DASHBOARD PAGE */}
 
@@ -1102,6 +1083,3 @@ function App() {
 }
 
 export default App;
-
-
-
