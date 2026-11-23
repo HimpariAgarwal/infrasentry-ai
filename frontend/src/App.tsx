@@ -1,4 +1,4 @@
-
+﻿
 import { useEffect, useState } from "react";
 import {
   Activity,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import ImageUpload from "./ImageUpload";
+import DetectionPanel from "./components/DetectionPanel";
 import "./App.css";
 
 const API = "http://127.0.0.1:8000";
@@ -428,7 +429,7 @@ function App() {
           <div className="error-message">
             <XCircle size={17} />
             {error}
-            <button onClick={() => setError("")}>×</button>
+            <button onClick={() => setError("")}>Ã—</button>
           </div>
         )}
 
@@ -436,7 +437,7 @@ function App() {
           <div className="success-message">
             <CheckCircle size={17} />
             {success}
-            <button onClick={() => setSuccess("")}>×</button>
+            <button onClick={() => setSuccess("")}>Ã—</button>
           </div>
         )}
 
@@ -949,12 +950,12 @@ function App() {
         {/* IMAGE UPLOAD PAGE */}
 
         {activePage === "image-upload" && (
-          <ImageUpload />
+          <><ImageUpload /><DetectionPanel /></>
         )}
 
         <footer className="footer">
           <p>
-            © 2026 InfraSentry AI. Infrastructure Intelligence Platform.
+            Â© 2026 InfraSentry AI. Infrastructure Intelligence Platform.
           </p>
         </footer>
 
@@ -964,3 +965,5 @@ function App() {
 }
 
 export default App;
+
+
