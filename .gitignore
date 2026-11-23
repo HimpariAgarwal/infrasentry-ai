@@ -101,3 +101,5 @@ pnpm-debug.log*
 research/RoadDamageDetector-master/*
 !research/RoadDamageDetector-master/README.md
 !research/RoadDamageDetector-master/LICENSE
+
+runs/
