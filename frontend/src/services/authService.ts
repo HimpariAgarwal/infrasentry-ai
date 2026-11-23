@@ -1,23 +1,21 @@
 ﻿const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-const TOKEN_KEY = "infrasentry_access_token";
-
 export function getToken(): string | null {
-  return sessionStorage.getItem(TOKEN_KEY);
+  return sessionStorage.getItem("infrasentry_token");
 }
 
 export function saveToken(token: string): void {
-  sessionStorage.setItem(TOKEN_KEY, token);
+  sessionStorage.setItem("infrasentry_token", token);
 }
 
 export function clearToken(): void {
-  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem("infrasentry_token");
 }
 
 export async function login(username: string, password: string) {
   const body = new URLSearchParams();
-  body.set("username", username);
-  body.set("password", password);
+  body.append("username", username);
+  body.append("password", password);
 
   const response = await fetch(`${API_BASE}/api/v1/auth/token`, {
     method: "POST",
@@ -27,51 +25,53 @@ export async function login(username: string, password: string) {
     body,
   });
 
-  const data = await response.json();
-
   if (!response.ok) {
-    throw new Error(data.detail || "Login failed.");
+    throw new Error("Invalid username or password.");
   }
 
+  const data = await response.json();
   saveToken(data.access_token);
   return data;
 }
 
 export async function authenticatedFetch(
-  url: string,
-  options: RequestInit = {}
+  input: RequestInfo | URL,
+  init: RequestInit = {},
 ): Promise<Response> {
   const token = getToken();
 
-  const headers = new Headers(options.headers);
+  const headers = new Headers(init.headers);
 
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  return fetch(url, {
-    ...options,
+  const response = await fetch(input, {
+    ...init,
     headers,
   });
+
+  if (response.status === 401) {
+    clearToken();
+    window.dispatchEvent(new Event("infrasentry:session-expired"));
+  }
+
+  return response;
 }
 
 export async function verifySession(): Promise<boolean> {
   const token = getToken();
-
   if (!token) return false;
 
   try {
     const response = await authenticatedFetch(
-      `${API_BASE}/api/v1/auth/me`
+      `${API_BASE}/api/v1/auth/me`,
     );
 
-    if (!response.ok) {
-      clearToken();
-      return false;
-    }
-
-    return true;
+    return response.ok;
   } catch {
     return false;
   }
 }
+
+export { API_BASE };
