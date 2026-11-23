@@ -19,6 +19,7 @@ import ImageUpload from "./ImageUpload";
 import DetectionPanel from "./components/DetectionPanel";
 import BenchmarkAnalytics from "./components/BenchmarkAnalytics";
 import DetectionHistory from "./components/DetectionHistory";
+import ModelHealth from "./components/ModelHealth";
 import "./App.css";
 
 const API = "http://127.0.0.1:8000";
@@ -75,7 +76,7 @@ function App() {
   const [severityFilter, setSeverityFilter] = useState("all");
 
   const [activePage, setActivePage] = useState<
-    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history"
+    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health"
   >("dashboard");
 
   const [form, setForm] = useState<ReportForm>(emptyForm);
@@ -410,6 +411,16 @@ function App() {
           Detection History
         </button>
 
+        <button
+          className={`nav-item ${
+            activePage === "model-health" ? "active" : ""
+          }`}
+          onClick={() => setActivePage("model-health")}
+        >
+          <Activity size={18} />
+          Model Health
+        </button>
+
         <div className="sidebar-bottom">
           <div className="system-status">
             <span className="status-dot"></span>
@@ -429,7 +440,13 @@ function App() {
                 ? "Infrastructure Dashboard"
                 : activePage === "new-report"
                   ? "Create New Report"
-                  : activePage === "ai-analytics" ? "AI Performance Analytics" : activePage === "detection-history" ? "Detection History" : "Image Upload"}
+                  : activePage === "ai-analytics"
+                  ? "AI Performance Analytics"
+                  : activePage === "detection-history"
+                    ? "Detection History"
+                    : activePage === "model-health"
+                      ? "AI Model Health"
+                      : "Image Upload"}
             </h1>
 
             <p>
@@ -465,6 +482,9 @@ function App() {
 
         {/* DETECTION HISTORY PAGE */}
         {activePage === "detection-history" && <DetectionHistory />}
+
+        {/* MODEL HEALTH PAGE */}
+        {activePage === "model-health" && <ModelHealth />}
 
         {/* DASHBOARD PAGE */}
 
