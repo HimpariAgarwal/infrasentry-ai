@@ -1,3 +1,4 @@
+import SLASchedulerAnalytics from "./components/SLASchedulerAnalytics";
 import SLANotificationCenter from "./components/SLANotificationCenter";
 import SLAAlertsDashboard from "./components/SLAAlertsDashboard";
 import SLADashboard from "./components/SLADashboard";
@@ -607,6 +608,15 @@ function App() {
           }}
         >
           <span>??</span> SLA Alerts
+        </button>
+
+
+        <button
+          className="sidebar-nav-item"
+          onClick={() => setActivePage("sla-analytics")}
+        >
+          <span>??</span>
+          <span>SLA Analytics</span>
         </button>
 
 <div className="sidebar-bottom">
@@ -1239,7 +1249,10 @@ function App() {
           <p>
             Â© 2026 InfraSentry AI. Infrastructure Intelligence Platform.
           </p>
-        </footer>
+        
+      {activePage === "sla-analytics" && <SLASchedulerAnalytics />}
+
+      </footer>
 
       </main>
     
