@@ -1,4 +1,4 @@
-
+﻿
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 * {
@@ -895,4 +895,33 @@ td {
 
 .uploaded-result a:hover {
   text-decoration: underline;
+}
+
+
+/* GLOBAL APP CONTAINER LAYOUT */
+.app-container {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.app-container > .sidebar {
+  flex: 0 0 255px;
+}
+
+.app-container > .main-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 750px) {
+  .app-container > .sidebar {
+    flex-basis: 75px;
+  }
+
+  .app-container > .main-content {
+    padding: 22px 14px;
+  }
 }

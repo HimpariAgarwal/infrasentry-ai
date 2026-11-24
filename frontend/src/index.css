@@ -118,3 +118,16 @@ code {
   background: transparent;
   cursor: pointer;
 }
+
+
+/* GLOBAL ROOT LAYOUT */
+#root {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  margin: 0;
+  text-align: left;
+  border: none;
+  display: block;
+  box-sizing: border-box;
+}
