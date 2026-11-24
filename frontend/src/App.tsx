@@ -1,3 +1,4 @@
+import { authenticatedFetch } from "./services/apiClient";
 import { verifySession, clearToken } from "./services/authService";
 import Login from "./components/Login";
 import LogsViewer from "./components/LogsViewer";
@@ -71,6 +72,20 @@ const emptyForm: ReportForm = {
 };
 
 function App() {
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      clearToken();
+      setIsAuthenticated(false);
+      setError("Your session expired. Please sign in again.");
+    };
+
+    window.addEventListener("infrasentry:session-expired", handleSessionExpired);
+
+    return () => {
+      window.removeEventListener("infrasentry:session-expired", handleSessionExpired);
+    };
+  }, []);
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
 
@@ -117,7 +132,7 @@ function App() {
 
   async function fetchReports() {
     try {
-      const response = await fetch(`${API}/reports`);
+      const response = await authenticatedFetch(`${API}/reports`);
 
       if (!response.ok) {
         throw new Error("Could not fetch reports.");
@@ -151,7 +166,7 @@ function App() {
 
   async function fetchAnalytics() {
     try {
-      const response = await fetch(`${API}/analytics/summary`);
+      const response = await authenticatedFetch(`${API}/analytics/summary`);
 
       if (!response.ok) {
         throw new Error("Could not fetch analytics.");
@@ -232,7 +247,7 @@ function App() {
     setSubmitting(true);
 
     try {
-      const response = await fetch(`${API}/reports`, {
+      const response = await authenticatedFetch(`${API}/reports`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -275,7 +290,7 @@ function App() {
     setSuccess("");
 
     try {
-      const response = await fetch(`${API}/reports/${id}`, {
+      const response = await authenticatedFetch(`${API}/reports/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -313,7 +328,7 @@ function App() {
     setSuccess("");
 
     try {
-      const response = await fetch(`${API}/reports/${id}`, {
+      const response = await authenticatedFetch(`${API}/reports/${id}`, {
         method: "DELETE"
 });
 

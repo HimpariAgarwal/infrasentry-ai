@@ -1,3 +1,4 @@
+import { authenticatedFetch } from "../services/apiClient";
 import { useCallback, useEffect, useState } from "react";
 import {
   Activity, AlertTriangle, CheckCircle, Clock,
@@ -40,7 +41,7 @@ export default function SystemHealth() {
 
   const fetchHealth = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/v1/system-health`);
+      const response = await authenticatedFetch(`${API_BASE}/api/v1/system-health`);
       if (!response.ok) throw new Error(`API error: ${response.status}`);
 
       const result: HealthData = await response.json();

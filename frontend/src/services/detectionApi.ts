@@ -1,4 +1,5 @@
-﻿export interface DamageDetection {
+import { authenticatedFetch } from "./apiClient";
+export interface DamageDetection {
   class_id: number;
   damage_type: string;
   confidence: number;
@@ -28,7 +29,7 @@ export async function detectRoadDamage(
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${API_URL}/api/v1/detect?confidence=${confidence}`,
     {
       method: "POST",

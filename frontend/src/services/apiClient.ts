@@ -24,3 +24,4 @@ export async function apiJson<T>(
 
   return response.json() as Promise<T>;
 }
+export { authenticatedFetch } from "./authService";

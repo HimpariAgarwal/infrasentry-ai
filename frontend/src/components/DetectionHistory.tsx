@@ -1,3 +1,4 @@
+import { authenticatedFetch } from "../services/apiClient";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Clock,
@@ -84,7 +85,7 @@ export default function DetectionHistory() {
     setError("");
 
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `${API}/api/v1/history?limit=100&offset=0`
       );
 
@@ -234,7 +235,7 @@ export default function DetectionHistory() {
     setError("");
 
     try {
-      const response = await fetch(`${API}/api/v1/history/${id}`);
+      const response = await authenticatedFetch(`${API}/api/v1/history/${id}`);
 
       if (!response.ok) {
         throw new Error(`Could not load record (${response.status}).`);
@@ -259,7 +260,7 @@ export default function DetectionHistory() {
     setSuccess("");
 
     try {
-      const response = await fetch(`${API}/api/v1/history/${id}`, {
+      const response = await authenticatedFetch(`${API}/api/v1/history/${id}`, {
         method: "DELETE",
       });
 

@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from "react";
+import { authenticatedFetch } from "../services/apiClient";
+import { useEffect, useState } from "react";
 
 type Detection = {
   damage_type: string;
@@ -47,7 +48,7 @@ export default function BenchmarkAnalytics() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/data/day21_inference_benchmark.json")
+    authenticatedFetch("/data/day21_inference_benchmark.json")
       .then((response) => {
         if (!response.ok) throw new Error("Benchmark report could not be loaded.");
         return response.json();

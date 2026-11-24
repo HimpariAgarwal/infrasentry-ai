@@ -1,4 +1,5 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import { authenticatedFetch } from "../services/apiClient";
+import { useCallback, useEffect, useState } from "react";
 import {
   Activity,
   CheckCircle,
@@ -27,7 +28,7 @@ function ModelHealth() {
     const start = performance.now();
 
     try {
-      const response = await fetch(`${API}/api/v1/model-info`, {
+      const response = await authenticatedFetch(`${API}/api/v1/model-info`, {
         signal: AbortSignal.timeout(10000),
       });
 

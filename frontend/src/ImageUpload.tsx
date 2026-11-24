@@ -1,3 +1,4 @@
+import { authenticatedFetch } from "./services/apiClient";
 
 import { useEffect, useState } from "react";
 import { ImagePlus, Upload, CheckCircle, AlertCircle } from "lucide-react";
@@ -24,7 +25,7 @@ function ImageUpload() {
   useEffect(() => {
     async function fetchReports() {
       try {
-        const response = await fetch(`${API}/reports`);
+        const response = await authenticatedFetch(`${API}/reports`);
 
         if (!response.ok) {
           throw new Error("Could not fetch reports.");
@@ -129,7 +130,7 @@ function ImageUpload() {
     setLoading(true);
 
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `${API}/images/upload/${encodeURIComponent(selectedReport)}`,
         {
           method: "POST",
