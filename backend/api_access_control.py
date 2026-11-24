@@ -5,6 +5,8 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from backend.security_audit import record_security_event
+
 
 PROTECTED_PREFIXES = (
     "/api/v1/detect",
@@ -29,9 +31,19 @@ class APIAccessControlMiddleware(BaseHTTPMiddleware):
         if not protected:
             return await call_next(request)
 
+        client_ip = (
+            request.client.host if request.client else "unknown"
+        )
+
         auth_header = request.headers.get("Authorization", "")
 
         if not auth_header.startswith("Bearer "):
+            record_security_event(
+                "authentication_failed",
+                path,
+                client_ip,
+                "missing_bearer_token",
+            )
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Authentication required."},
@@ -42,6 +54,12 @@ class APIAccessControlMiddleware(BaseHTTPMiddleware):
         secret = os.getenv("JWT_SECRET_KEY", "")
 
         if not secret or len(secret) < 32:
+            record_security_event(
+                "authentication_unavailable",
+                path,
+                client_ip,
+                "invalid_server_secret",
+            )
             return JSONResponse(
                 status_code=503,
                 content={"detail": "JWT authentication is not configured."},
@@ -58,12 +76,25 @@ class APIAccessControlMiddleware(BaseHTTPMiddleware):
                 raise jwt.InvalidTokenError("Missing subject")
 
         except jwt.ExpiredSignatureError:
+            record_security_event(
+                "authentication_failed",
+                path,
+                client_ip,
+                "expired_token",
+            )
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Token expired."},
                 headers={"WWW-Authenticate": "Bearer"},
             )
+
         except jwt.InvalidTokenError:
+            record_security_event(
+                "authentication_failed",
+                path,
+                client_ip,
+                "invalid_token",
+            )
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Invalid authentication token."},
