@@ -1,4 +1,5 @@
-import { authenticatedFetch } from "./apiClient";
+﻿import { authenticatedFetch } from "./apiClient";
+
 export interface DamageDetection {
   class_id: number;
   damage_type: string;
@@ -19,8 +20,7 @@ export interface DetectionResponse {
   message: string;
 }
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+const API_URL = import.meta.env.VITE_API_URL ?? "";
 
 export async function detectRoadDamage(
   file: File,

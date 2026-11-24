@@ -1,4 +1,4 @@
-﻿const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+﻿const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 export function getToken(): string | null {
   return sessionStorage.getItem("infrasentry_token");
@@ -39,7 +39,6 @@ export async function authenticatedFetch(
   init: RequestInit = {},
 ): Promise<Response> {
   const token = getToken();
-
   const headers = new Headers(init.headers);
 
   if (token) {

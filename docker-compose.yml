@@ -1,4 +1,4 @@
-services:
+﻿services:
   db:
     image: postgres:16
     container_name: infrasentry-db
@@ -44,6 +44,32 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ""
+    container_name: infrasentry-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -q
+        - -O
+        - /dev/null
+        - http://127.0.0.1/health
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   postgres_data:
