@@ -1,0 +1,173 @@
+﻿.sla-retry-profiles {
+  width: 100%;
+  margin: 20px 0;
+  color: var(--text-primary, inherit);
+}
+
+.sla-retry-profiles-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.sla-retry-profiles-header h2 {
+  margin: 0 0 5px;
+  font-size: 1.25rem;
+}
+
+.sla-retry-profiles-header p {
+  margin: 0;
+  color: var(--text-secondary, #888);
+  font-size: 0.9rem;
+}
+
+.sla-retry-profiles-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  border: 1px solid var(--border-color, #777);
+  border-radius: 8px;
+  background: var(--card-bg, transparent);
+  color: inherit;
+  cursor: pointer;
+}
+
+.sla-retry-profiles-refresh:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sla-retry-profiles-summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 16px;
+  color: var(--text-secondary, #888);
+  font-size: 0.9rem;
+}
+
+.sla-retry-profiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 15px;
+}
+
+.sla-retry-profile-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border-color, #777);
+  border-radius: 12px;
+  background: var(--card-bg, transparent);
+}
+
+.sla-retry-profile-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sla-retry-profile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--surface-secondary, rgba(128, 128, 128, 0.12));
+}
+
+.sla-retry-profile-title h3 {
+  margin: 0;
+  text-transform: capitalize;
+  font-size: 1rem;
+}
+
+.sla-retry-profile-label {
+  color: var(--text-secondary, #888);
+  font-size: 0.78rem;
+}
+
+.sla-retry-profile-description {
+  min-height: 40px;
+  margin: 16px 0;
+  color: var(--text-secondary, #888);
+  font-size: 0.87rem;
+  line-height: 1.5;
+}
+
+.sla-retry-profile-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color, #777);
+}
+
+.sla-retry-profile-metrics div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.sla-retry-profile-metrics span {
+  color: var(--text-secondary, #888);
+  font-size: 0.72rem;
+}
+
+.sla-retry-profile-metrics strong {
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.sla-retry-profiles-state,
+.sla-retry-profiles-error {
+  padding: 18px;
+  border: 1px solid var(--border-color, #777);
+  border-radius: 10px;
+  color: var(--text-secondary, #888);
+}
+
+.sla-retry-profiles-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sla-retry-profiles-error button {
+  padding: 7px 11px;
+  border: 1px solid var(--border-color, #777);
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sla-spinning {
+  animation: sla-retry-spin 1s linear infinite;
+}
+
+@keyframes sla-retry-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 600px) {
+  .sla-retry-profiles-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sla-retry-profile-metrics {
+    gap: 5px;
+  }
+
+  .sla-retry-profile-metrics span {
+    font-size: 0.68rem;
+  }
+}
