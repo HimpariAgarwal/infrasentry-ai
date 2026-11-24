@@ -6,6 +6,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from sla_alerts import generate_sla_alerts
 from sla_scheduler_metrics import record_scheduler_run
+from sla_scheduler_retry_execution import execute_sla_generation_with_retry
 
 _scheduler = BackgroundScheduler(timezone="UTC")
 _lock = RLock()
@@ -16,7 +17,7 @@ _job_id = "sla_alert_generation"
 def _run_sla_job():
     started = datetime.now(timezone.utc)
     try:
-        result = generate_sla_alerts()
+        result = execute_sla_generation_with_retry(generate_sla_alerts)
         record_scheduler_run(
             status="success",
             duration_seconds=(datetime.now(timezone.utc) - started).total_seconds(),
