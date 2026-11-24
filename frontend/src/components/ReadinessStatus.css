@@ -1,0 +1,111 @@
+﻿.readiness-panel {
+  width: 100%;
+  margin: 18px 0;
+  padding: 20px;
+  border: 1px solid var(--border-color, #d9dee8);
+  border-radius: 14px;
+  background: var(--card-background, #fff);
+  color: var(--text-color, #202938);
+  box-sizing: border-box;
+}
+
+.readiness-heading,
+.readiness-footer,
+.readiness-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.readiness-heading h3 {
+  margin: 0 0 5px;
+  font-size: 1.05rem;
+}
+
+.readiness-heading p,
+.readiness-status p {
+  margin: 0;
+  opacity: .7;
+  font-size: .85rem;
+}
+
+.readiness-pill {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.readiness-pill.is-ready {
+  color: #087443;
+  background: #dcfce7;
+}
+
+.readiness-pill.is-degraded {
+  color: #a33b16;
+  background: #ffedd5;
+}
+
+.readiness-status {
+  justify-content: flex-start;
+  margin: 22px 0;
+}
+
+.readiness-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: 0 0 12px;
+}
+
+.readiness-indicator.is-ready { background: #16a34a; }
+.readiness-indicator.is-degraded { background: #ea580c; }
+
+.readiness-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.readiness-metrics div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px;
+  border-radius: 10px;
+  background: var(--surface-background, #f3f5f9);
+}
+
+.readiness-metrics strong { font-size: 1.35rem; }
+.readiness-metrics span,
+.readiness-meta,
+.readiness-footer { font-size: .78rem; opacity: .75; }
+
+.readiness-meta { margin: 14px 0 0; overflow-wrap: anywhere; }
+.readiness-footer { margin-top: 16px; }
+
+.readiness-footer button {
+  padding: 7px 13px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.readiness-footer button:disabled { opacity: .5; cursor: wait; }
+
+.readiness-error {
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: 8px;
+  color: #9f2727;
+  background: #fee2e2;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  .readiness-panel { padding: 14px; }
+  .readiness-metrics { gap: 7px; }
+  .readiness-metrics div { padding: 9px; }
+  .readiness-metrics strong { font-size: 1.1rem; }
+}
