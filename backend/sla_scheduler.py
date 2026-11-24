@@ -1,4 +1,5 @@
-﻿from datetime import datetime, timezone
+from sla_scheduler_reliability import prevent_overlapping_runs
+from datetime import datetime, timezone
 from threading import RLock
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -11,6 +12,7 @@ _lock = RLock()
 _job_id = "sla_alert_generation"
 
 
+@prevent_overlapping_runs
 def _run_sla_job():
     started = datetime.now(timezone.utc)
     try:
