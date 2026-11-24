@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from system_monitor import get_system_health
 from auth_router import get_current_user
@@ -39,3 +39,28 @@ def system_diagnostics(current_user: dict = Depends(get_current_user)):
             status_code=500,
             detail="System diagnostics unavailable.",
         )
+
+# Day 105: Protected operational readiness endpoint.
+@router.get("/readiness")
+def get_system_readiness(
+    current_user: dict = Depends(get_current_user),
+):
+    """Return a safe operational readiness summary for authenticated users."""
+    diagnostics = collect_system_diagnostics()
+    summary = diagnostics.get("summary") or {}
+    status = diagnostics.get("status", "degraded")
+
+    degraded = int(summary.get("degraded", 0))
+    ready = status == "healthy" and degraded == 0
+
+    return {
+        "service": diagnostics.get("service", "InfraSentry AI"),
+        "ready": ready,
+        "status": status,
+        "timestamp": diagnostics.get("timestamp"),
+        "checks": {
+            "total": int(summary.get("total", 0)),
+            "healthy": int(summary.get("healthy", 0)),
+            "degraded": degraded,
+        },
+    }
