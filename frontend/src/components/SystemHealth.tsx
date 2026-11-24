@@ -32,12 +32,58 @@ interface HealthEvent {
   message: string;
 }
 
+interface DiagnosticCheck {
+  name: string;
+  status: string;
+  details: Record<string, string | number>;
+}
+
+interface DiagnosticsData {
+  service: string;
+  status: string;
+  timestamp: string;
+  runtime: {
+    python_version: string;
+    platform: string;
+  };
+  checks: DiagnosticCheck[];
+  summary: {
+    total: number;
+    healthy: number;
+    degraded: number;
+  };
+}
+
 export default function SystemHealth() {
   const [data, setData] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState("");
   const [events, setEvents] = useState<HealthEvent[]>([]);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsData | null>(null);
+  const [diagnosticsError, setDiagnosticsError] = useState("");
+
+  const fetchDiagnostics = useCallback(async () => {
+    try {
+      const response = await authenticatedFetch(
+        `${API_BASE}/api/v1/system-diagnostics`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Diagnostics API error: ${response.status}`);
+      }
+
+      const result: DiagnosticsData = await response.json();
+      setDiagnostics(result);
+      setDiagnosticsError("");
+    } catch (err) {
+      setDiagnosticsError(
+        err instanceof Error
+          ? err.message
+          : "Diagnostics service unavailable"
+      );
+    }
+  }, []);
 
   const fetchHealth = useCallback(async () => {
     try {
@@ -88,10 +134,21 @@ export default function SystemHealth() {
   }, []);
 
   useEffect(() => {
-    fetchHealth();
-    const timer = window.setInterval(fetchHealth, 15000);
-    return () => window.clearInterval(timer);
-  }, [fetchHealth]);
+    const initialFetch = window.setTimeout(() => {
+      void fetchHealth();
+      void fetchDiagnostics();
+    }, 0);
+
+    const timer = window.setInterval(() => {
+      void fetchHealth();
+      void fetchDiagnostics();
+    }, 15000);
+
+    return () => {
+      window.clearTimeout(initialFetch);
+      window.clearInterval(timer);
+    };
+  }, [fetchHealth, fetchDiagnostics]);
 
 
   const exportHealthEvents = () => {
@@ -163,6 +220,136 @@ export default function SystemHealth() {
           <p>Last updated: {lastUpdated}</p>
         </div>
         <span className={`health-status-badge ${data.status}`}>{data.status}</span>
+      </div>
+
+      {/* PROTECTED SYSTEM DIAGNOSTICS */}
+      <div className="health-detail-card diagnostics-panel">
+        <div className="diagnostics-heading">
+          <div>
+            <h3><Activity size={19} /> Protected System Diagnostics</h3>
+            <p>Live diagnostics from the authenticated backend API</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={fetchDiagnostics}
+            disabled={Boolean(diagnosticsError && !diagnostics)}
+          >
+            <RefreshCw size={15} /> Refresh diagnostics
+          </button>
+        </div>
+
+        {diagnosticsError && (
+          <div className="health-warning">
+            <AlertTriangle size={16} />
+            {diagnosticsError}
+          </div>
+        )}
+
+        {!diagnostics && !diagnosticsError && (
+          <p>Loading protected diagnostics...</p>
+        )}
+
+        {diagnostics && (
+          <>
+            <div className="diagnostics-overview">
+              <div>
+                <span>Diagnostics status</span>
+                <strong className={
+                  diagnostics.status === "healthy"
+                    ? "health-connected"
+                    : "health-disconnected"
+                }>
+                  {diagnostics.status.toUpperCase()}
+                </strong>
+              </div>
+
+              <div>
+                <span>Total checks</span>
+                <strong>{diagnostics.summary.total}</strong>
+              </div>
+
+              <div>
+                <span>Healthy checks</span>
+                <strong className="health-connected">
+                  {diagnostics.summary.healthy}
+                </strong>
+              </div>
+
+              <div>
+                <span>Degraded checks</span>
+                <strong className={
+                  diagnostics.summary.degraded > 0
+                    ? "health-disconnected"
+                    : "health-connected"
+                }>
+                  {diagnostics.summary.degraded}
+                </strong>
+              </div>
+            </div>
+
+            <div className="diagnostics-runtime">
+              <h4>Runtime Information</h4>
+              <p>
+                <span>Service</span>
+                <strong>{diagnostics.service}</strong>
+              </p>
+              <p>
+                <span>Python version</span>
+                <strong>{diagnostics.runtime.python_version}</strong>
+              </p>
+              <p>
+                <span>Platform</span>
+                <strong>{diagnostics.runtime.platform}</strong>
+              </p>
+              <p>
+                <span>Last diagnostics timestamp</span>
+                <strong>
+                  {new Date(diagnostics.timestamp).toLocaleString()}
+                </strong>
+              </p>
+            </div>
+
+            <div className="diagnostics-checks">
+              <h4>Individual Checks</h4>
+
+              {diagnostics.checks.map((check) => (
+                <div className="diagnostics-check-row" key={check.name}>
+                  <div>
+                    <strong>{check.name.replace(/_/g, " ")}</strong>
+                    <span className={
+                      check.status === "healthy"
+                        ? "health-connected"
+                        : "health-disconnected"
+                    }>
+                      {check.status.toUpperCase()}
+                    </span>
+                  </div>
+
+                  {typeof check.details.usage_percent === "number" && (
+                    <p>
+                      Disk usage: {check.details.usage_percent}%
+                      {" ? "}
+                      Warning threshold: {check.details.warning_threshold}%
+                    </p>
+                  )}
+
+                  {typeof check.details.python_version === "string" && (
+                    <p>
+                      Python: {check.details.python_version}
+                    </p>
+                  )}
+
+                  {typeof check.details.implementation === "string" && (
+                    <p>
+                      Implementation: {check.details.implementation}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="health-alert-summary">

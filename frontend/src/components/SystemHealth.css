@@ -59,3 +59,140 @@
   .health-events-heading { align-items:flex-start; flex-direction:column; }
   .health-event-actions { flex-wrap:wrap; }
 }
+
+/* DAY 104 - PROTECTED DIAGNOSTICS */
+
+.diagnostics-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.diagnostics-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.diagnostics-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 5px;
+}
+
+.diagnostics-heading p {
+  margin: 0;
+  font-size: 12px;
+  opacity: .7;
+}
+
+.diagnostics-heading button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.diagnostics-heading button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.diagnostics-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.diagnostics-overview > div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px;
+  border: 1px solid var(--border-color, #333);
+  border-radius: 9px;
+}
+
+.diagnostics-overview span,
+.diagnostics-runtime p span {
+  font-size: 12px;
+  opacity: .7;
+}
+
+.diagnostics-overview strong {
+  font-size: 19px;
+}
+
+.diagnostics-runtime h4,
+.diagnostics-checks h4 {
+  margin: 8px 0;
+}
+
+.diagnostics-runtime p {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  margin: 0;
+  border-bottom: 1px solid var(--border-color, #333);
+  font-size: 13px;
+}
+
+.diagnostics-runtime p:last-child {
+  border-bottom: 0;
+}
+
+.diagnostics-runtime strong {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.diagnostics-check-row {
+  padding: 12px;
+  margin-top: 9px;
+  border: 1px solid var(--border-color, #333);
+  border-radius: 9px;
+}
+
+.diagnostics-check-row > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  text-transform: capitalize;
+}
+
+.diagnostics-check-row p {
+  margin: 8px 0 0;
+  font-size: 12px;
+  opacity: .75;
+}
+
+@media (max-width: 700px) {
+  .diagnostics-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .diagnostics-runtime p {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .diagnostics-runtime strong {
+    text-align: left;
+  }
+}
+
+@media (max-width: 400px) {
+  .diagnostics-overview {
+    grid-template-columns: 1fr;
+  }
+}
