@@ -1,0 +1,154 @@
+﻿.sla-retry-dashboard {
+  width: 100%;
+  margin-top: 24px;
+  color: var(--text-primary, inherit);
+}
+
+.sla-retry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.sla-retry-header h2 {
+  margin: 0 0 5px;
+}
+
+.sla-retry-header p {
+  margin: 0;
+  opacity: 0.7;
+}
+
+.sla-retry-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid var(--border-color, #777);
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--card-bg, transparent);
+  color: inherit;
+}
+
+.sla-retry-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sla-retry-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.sla-retry-card {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 18px;
+  border: 1px solid var(--border-color, #777);
+  border-radius: 12px;
+  background: var(--card-bg, transparent);
+}
+
+.sla-retry-card span,
+.sla-retry-summary span {
+  opacity: 0.7;
+  font-size: 13px;
+}
+
+.sla-retry-card strong {
+  font-size: 25px;
+}
+
+.sla-retry-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--border-color, #777);
+  border-radius: 12px;
+}
+
+.sla-retry-summary div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sla-retry-summary strong {
+  overflow-wrap: anywhere;
+}
+
+.sla-retry-history {
+  margin-top: 24px;
+}
+
+.sla-retry-table-wrap {
+  overflow-x: auto;
+}
+
+.sla-retry-history table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.sla-retry-history th,
+.sla-retry-history td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color, #777);
+  white-space: nowrap;
+}
+
+.sla-retry-status {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 20px;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.sla-retry-status.success {
+  background: rgba(34, 160, 90, 0.15);
+  color: #23965b;
+}
+
+.sla-retry-status.failed {
+  background: rgba(220, 60, 60, 0.15);
+  color: #d64c4c;
+}
+
+.sla-retry-error {
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid #d64c4c;
+  border-radius: 8px;
+  color: #d64c4c;
+}
+
+@media (max-width: 850px) {
+  .sla-retry-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sla-retry-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .sla-retry-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sla-retry-kpis {
+    grid-template-columns: 1fr;
+  }
+}
