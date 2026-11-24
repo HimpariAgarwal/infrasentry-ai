@@ -1,5 +1,6 @@
 import SLASchedulerAnalytics from "./components/SLASchedulerAnalytics";
 import SLARetryMetricsDashboard from "./components/SLARetryMetricsDashboard";
+import SLARetryComparisonDashboard from "./components/SLARetryComparisonDashboard";
 import SLANotificationCenter from "./components/SLANotificationCenter";
 import SLAAlertsDashboard from "./components/SLAAlertsDashboard";
 import SLADashboard from "./components/SLADashboard";
@@ -1257,6 +1258,7 @@ function App() {
           <SLASchedulerAnalytics />
           <SLASchedulerControls />
               <SLARetryMetricsDashboard />
+          <SLARetryComparisonDashboard />
         </>
       )}
 
