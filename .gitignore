@@ -106,3 +106,5 @@ runs/
 **/backups/
 
 logs/
+*.env
+**/*.env
