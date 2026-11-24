@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Activity,
   CheckCircle,
@@ -7,6 +7,10 @@ import {
   XCircle,
 } from "lucide-react";
 import { API_BASE, authenticatedFetch } from "../services/authService";
+import {
+  exportRetryMetricsCSV,
+  exportRetryMetricsPDF,
+} from "../services/slaRetryReportService";
 import "./SLARetryMetricsDashboard.css";
 
 interface RetryRun {
@@ -89,6 +93,20 @@ export default function SLARetryMetricsDashboard() {
           <h2>SLA Retry Monitoring</h2>
           <p>Execution reliability and retry statistics</p>
         </div>
+        <button
+          className="sla-retry-export"
+          onClick={() => exportRetryMetricsCSV(metrics)}
+          disabled={loading || metrics.total_runs === 0}
+        >
+          Export CSV
+        </button>
+        <button
+          className="sla-retry-export"
+          onClick={() => exportRetryMetricsPDF(metrics)}
+          disabled={loading || metrics.total_runs === 0}
+        >
+          Export PDF
+        </button>
         <button
           className="sla-retry-refresh"
           onClick={() => void loadMetrics()}
