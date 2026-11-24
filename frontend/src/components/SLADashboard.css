@@ -1,0 +1,167 @@
+﻿.sla-dashboard {
+  display: grid;
+  gap: 20px;
+  padding: 22px;
+}
+
+.sla-header,
+.sla-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.sla-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sla-header p,
+.sla-updated {
+  color: #94a3b8;
+}
+
+.sla-header button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 15px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sla-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.sla-kpis > div,
+.sla-compliance,
+.sla-targets,
+.sla-table-section {
+  padding: 20px;
+  border: 1px solid #29364a;
+  border-radius: 12px;
+  background: var(--card-bg, #111c2d);
+}
+
+.sla-kpis > div {
+  display: grid;
+  gap: 9px;
+}
+
+.sla-kpis strong,
+.sla-compliance strong {
+  font-size: 26px;
+}
+
+.sla-compliance {
+  display: grid;
+  gap: 14px;
+}
+
+.sla-compliance > div:first-child {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sla-progress {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #29364a;
+}
+
+.sla-progress > div {
+  height: 100%;
+  border-radius: 10px;
+  background: #22c55e;
+  transition: width .3s ease;
+}
+
+.sla-target-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.sla-target-grid > div {
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  border-radius: 8px;
+  background: #1e293b;
+  text-transform: capitalize;
+}
+
+.sla-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 15px;
+}
+
+.sla-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.sla-table th,
+.sla-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #29364a;
+}
+
+.sla-table th {
+  color: #94a3b8;
+}
+
+.sla-badge {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.sla-badge.breached {
+  color: #fca5a5;
+  background: #451a1a;
+}
+
+.sla-badge.within_sla {
+  color: #86efac;
+  background: #14532d;
+}
+
+.sla-badge.unknown {
+  color: #fcd34d;
+  background: #422006;
+}
+
+.sla-table-header select {
+  padding: 9px;
+  border-radius: 7px;
+  border: 1px solid #475569;
+}
+
+.sla-error {
+  color: #ef4444;
+}
+
+.sla-updated {
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .sla-dashboard {
+    padding: 12px;
+  }
+}

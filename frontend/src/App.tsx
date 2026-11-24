@@ -1,3 +1,4 @@
+import SLADashboard from "./components/SLADashboard";
 import IncidentAnalytics from "./components/IncidentAnalytics";
 import { ShieldCheck } from "lucide-react";
 import IncidentDashboard from "./components/IncidentDashboard";
@@ -128,7 +129,7 @@ function App() {
   const [severityFilter, setSeverityFilter] = useState("all");
 
   const [activePage, setActivePage] = useState<
-    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health" | "reports-analytics" | "road-map" | "performance" | "system-health"  | "logs" | "security" | "security-alerts" | "incidents" | "incident-analytics">("dashboard");
+    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health" | "reports-analytics" | "road-map" | "performance" | "system-health"  | "logs" | "security" | "security-alerts" | "incidents" | "incident-analytics" | "sla">("dashboard");
 
   const [form, setForm] = useState<ReportForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -587,6 +588,10 @@ function App() {
 
         <button className="nav-item" onClick={() => setActivePage("incident-analytics")}>
           <Activity size={18} /> <span>Incident Analytics</span>
+        </button>
+
+        <button className="nav-item" onClick={() => setActivePage("sla")}>
+          <Clock size={18} /> <span>SLA Monitoring</span>
         </button>
 <div className="sidebar-bottom">
           <div className="system-status">
@@ -1207,6 +1212,8 @@ function App() {
         {activePage === "incidents" && <IncidentDashboard />}
 
         {activePage === "incident-analytics" && <IncidentAnalytics />}
+
+        {activePage === "sla" && <SLADashboard />}
 
         <footer className="footer">
           <p>
