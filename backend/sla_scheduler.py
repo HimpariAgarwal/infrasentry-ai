@@ -1,99 +1,120 @@
-﻿import logging
-from threading import Lock
-from time import perf_counter
+﻿from datetime import datetime, timezone
+from threading import RLock
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from backend.sla_alerts import generate_sla_alerts
-from backend.sla_scheduler_metrics import record_scheduler_run
+from sla_alerts import generate_sla_alerts
+from sla_scheduler_metrics import record_scheduler_run
 
-logger = logging.getLogger("infrasentry.sla_scheduler")
+_scheduler = BackgroundScheduler(timezone="UTC")
+_lock = RLock()
+_job_id = "sla_alert_generation"
 
-_scheduler = None
-_scheduler_lock = Lock()
 
-
-def run_sla_escalation_job():
-    started = perf_counter()
-
+def _run_sla_job():
+    started = datetime.now(timezone.utc)
     try:
         result = generate_sla_alerts()
-        duration = (perf_counter() - started) * 1000
         record_scheduler_run(
-            "success",
-            duration,
-            message="SLA alert generation completed",
+            status="success",
+            duration_seconds=(datetime.now(timezone.utc) - started).total_seconds(),
+            details={"result": str(result)[:500]},
         )
-        logger.info("SLA escalation job completed in %.2f ms: %s", duration, result)
-
+        return result
     except Exception as exc:
-        duration = (perf_counter() - started) * 1000
-        try:
-            record_scheduler_run(
-                "failed",
-                duration,
-                message=str(exc)[:300],
+        record_scheduler_run(
+            status="failure",
+            duration_seconds=(datetime.now(timezone.utc) - started).total_seconds(),
+            details={"error": str(exc)[:500]},
+        )
+        raise
+
+
+def start_scheduler():
+    with _lock:
+        if not _scheduler.running:
+            _scheduler.add_job(
+                _run_sla_job,
+                trigger="interval",
+                seconds=60,
+                id=_job_id,
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
             )
-        except Exception:
-            logger.exception("Could not persist scheduler failure metrics")
-
-        logger.exception("SLA escalation job failed")
-
-
-def start_sla_scheduler():
-    global _scheduler
-
-    with _scheduler_lock:
-        if _scheduler is not None and _scheduler.running:
-            return
-
-        scheduler = BackgroundScheduler(
-            timezone="UTC",
-            job_defaults={
-                "coalesce": True,
-                "max_instances": 1,
-                "misfire_grace_time": 30,
-            },
-        )
-
-        scheduler.add_job(
-            run_sla_escalation_job,
-            trigger="interval",
-            seconds=60,
-            id="infrasentry_sla_escalation",
-            replace_existing=True,
-        )
-
-        scheduler.start()
-        _scheduler = scheduler
-        logger.info("SLA escalation scheduler started (60-second interval).")
+            _scheduler.start()
+        elif _scheduler.get_job(_job_id) is None:
+            _scheduler.add_job(
+                _run_sla_job,
+                trigger="interval",
+                seconds=60,
+                id=_job_id,
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+            )
+        return get_scheduler_status()
 
 
-def stop_sla_scheduler():
-    global _scheduler
+def pause_scheduler():
+    with _lock:
+        if _scheduler.running and _scheduler.get_job(_job_id):
+            _scheduler.pause_job(_job_id)
+        return get_scheduler_status()
 
-    with _scheduler_lock:
-        if _scheduler is not None and _scheduler.running:
+
+def resume_scheduler():
+    with _lock:
+        if not _scheduler.running:
+            return start_scheduler()
+        job = _scheduler.get_job(_job_id)
+        if job is None:
+            _scheduler.add_job(
+                _run_sla_job,
+                trigger="interval",
+                seconds=60,
+                id=_job_id,
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+            )
+        else:
+            _scheduler.resume_job(_job_id)
+        return get_scheduler_status()
+
+
+def trigger_scheduler_now():
+    with _lock:
+        if not _scheduler.running:
+            raise RuntimeError("Scheduler is not running")
+        job = _scheduler.get_job(_job_id)
+        if job is None:
+            raise RuntimeError("SLA scheduler job is not configured")
+        _scheduler.modify_job(_job_id, next_run_time=datetime.now(timezone.utc))
+        return {"triggered": True, "message": "SLA job scheduled immediately"}
+
+
+def get_scheduler_status():
+    with _lock:
+        job = _scheduler.get_job(_job_id) if _scheduler.running else None
+        paused = bool(_scheduler.running and job is not None and job.next_run_time is None)
+        return {
+            "running": _scheduler.running,
+            "paused": paused,
+            "job_configured": job is not None,
+            "job_id": _job_id,
+            "interval_seconds": 60,
+            "next_run_time": (
+                job.next_run_time.isoformat()
+                if job is not None and job.next_run_time is not None
+                else None
+            ),
+        }
+
+
+def stop_scheduler():
+    with _lock:
+        if _scheduler.running:
             _scheduler.shutdown(wait=False)
-            logger.info("SLA escalation scheduler stopped.")
+        return get_scheduler_status()
 
-        _scheduler = None
-
-
-def get_sla_scheduler_status():
-    scheduler = _scheduler
-
-    if scheduler is None or not scheduler.running:
-        return {"running": False, "interval_seconds": 60}
-
-    job = scheduler.get_job("infrasentry_sla_escalation")
-
-    return {
-        "running": True,
-        "interval_seconds": 60,
-        "next_run_time": (
-            job.next_run_time.isoformat()
-            if job and job.next_run_time
-            else None
-        ),
-    }
