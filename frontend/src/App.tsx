@@ -1,3 +1,4 @@
+import NotificationCenter from "./components/NotificationCenter";
 import SecurityAlerts from "./components/SecurityAlerts";
 import { ShieldAlert } from "lucide-react";
 import SecurityDashboard from "./components/SecurityDashboard";
@@ -591,6 +592,7 @@ function App() {
  }
 
 
+        <NotificationCenter />
         <header className="top-header">
           <div>
             <h1>
