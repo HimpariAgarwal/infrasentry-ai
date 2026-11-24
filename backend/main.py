@@ -1,3 +1,4 @@
+from backend.incident_analytics_router import router as incident_analytics_router
 from backend.incident_router import router as incident_router
 from backend.alerts_router import router as alerts_router
 from backend.threat_router import router as threat_router
@@ -152,6 +153,7 @@ app = FastAPI(
     description="AI-powered Road Infrastructure Intelligence Platform",
     version="1.0.0"
 )
+app.include_router(incident_analytics_router)
 app.include_router(incident_router)
 app.include_router(alerts_router)
 app.include_router(threat_router)
