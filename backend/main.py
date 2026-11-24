@@ -156,11 +156,13 @@ from system_router import router as system_router
 from sla_scheduler_retry_metrics_router import router as sla_retry_metrics_router
 from sla_scheduler_retry_profiles_router import router as sla_retry_profiles_router
 from sla_scheduler_retry_preview_router import router as sla_retry_preview_router
+from sla_scheduler_retry_comparison_router import router as sla_retry_comparison_router
 app = FastAPI(
     title="InfraSentry AI API",
     description="AI-powered Road Infrastructure Intelligence Platform",
     version="1.0.0"
 )
+app.include_router(sla_retry_comparison_router)
 app.include_router(sla_retry_preview_router)
 app.include_router(sla_retry_profiles_router)
 app.include_router(sla_retry_metrics_router)
