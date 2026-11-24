@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Activity, AlertTriangle, CheckCircle, Clock, RefreshCw
 } from "lucide-react";
@@ -8,6 +8,7 @@ import {
 } from "recharts";
 import { authenticatedFetch, API_BASE } from "../services/authService";
 import "./IncidentAnalytics.css";
+import { exportIncidentAnalyticsPDF } from "../services/incidentReportService";
 
 interface Analytics {
   total_incidents: number;
@@ -76,6 +77,11 @@ export default function IncidentAnalytics() {
         <button onClick={loadAnalytics} disabled={loading}>
           <RefreshCw size={16} /> Refresh
         </button>
+        {data && (
+          <button onClick={() => exportIncidentAnalyticsPDF(data)}>
+            Download PDF
+          </button>
+        )}
       </div>
 
       {error && <p className="incident-analytics-error">{error}</p>}
