@@ -14,6 +14,7 @@ PROTECTED_PREFIXES = (
     "/api/v1/logs",
     "/api/v1/system-health",
     "/api/v1/incidents",
+    "/api/v1/sla",
     "/api/v1/security",
 )
 
