@@ -1,9 +1,11 @@
 ﻿import logging
 from threading import Lock
+from time import perf_counter
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from backend.sla_alerts import generate_sla_alerts
+from backend.sla_scheduler_metrics import record_scheduler_run
 
 logger = logging.getLogger("infrasentry.sla_scheduler")
 
@@ -12,11 +14,29 @@ _scheduler_lock = Lock()
 
 
 def run_sla_escalation_job():
-    """Generate overdue SLA alerts periodically."""
+    started = perf_counter()
+
     try:
         result = generate_sla_alerts()
-        logger.info("SLA escalation job completed: %s", result)
-    except Exception:
+        duration = (perf_counter() - started) * 1000
+        record_scheduler_run(
+            "success",
+            duration,
+            message="SLA alert generation completed",
+        )
+        logger.info("SLA escalation job completed in %.2f ms: %s", duration, result)
+
+    except Exception as exc:
+        duration = (perf_counter() - started) * 1000
+        try:
+            record_scheduler_run(
+                "failed",
+                duration,
+                message=str(exc)[:300],
+            )
+        except Exception:
+            logger.exception("Could not persist scheduler failure metrics")
+
         logger.exception("SLA escalation job failed")
 
 
@@ -42,7 +62,6 @@ def start_sla_scheduler():
             seconds=60,
             id="infrasentry_sla_escalation",
             replace_existing=True,
-            next_run_time=None,
         )
 
         scheduler.start()
@@ -63,12 +82,18 @@ def stop_sla_scheduler():
 
 def get_sla_scheduler_status():
     scheduler = _scheduler
+
     if scheduler is None or not scheduler.running:
         return {"running": False, "interval_seconds": 60}
 
     job = scheduler.get_job("infrasentry_sla_escalation")
+
     return {
         "running": True,
         "interval_seconds": 60,
-        "next_run_time": job.next_run_time.isoformat() if job and job.next_run_time else None,
+        "next_run_time": (
+            job.next_run_time.isoformat()
+            if job and job.next_run_time
+            else None
+        ),
     }

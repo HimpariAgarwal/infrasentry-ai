@@ -1,3 +1,4 @@
+from backend.sla_scheduler_analytics_router import router as sla_scheduler_analytics_router
 from backend.sla_scheduler import start_sla_scheduler, stop_sla_scheduler
 from backend.sla_scheduler_router import router as sla_scheduler_router
 from backend.sla_alerts_router import router as sla_alerts_router
@@ -157,6 +158,7 @@ app = FastAPI(
     description="AI-powered Road Infrastructure Intelligence Platform",
     version="1.0.0"
 )
+app.include_router(sla_scheduler_analytics_router)
 app.include_router(sla_scheduler_router)
 app.include_router(sla_alerts_router)
 app.include_router(sla_router)
