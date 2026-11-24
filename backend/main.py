@@ -1,3 +1,4 @@
+from backend.sla_alerts_router import router as sla_alerts_router
 from backend.sla_router import router as sla_router
 from backend.incident_analytics_router import router as incident_analytics_router
 from backend.incident_router import router as incident_router
@@ -154,6 +155,7 @@ app = FastAPI(
     description="AI-powered Road Infrastructure Intelligence Platform",
     version="1.0.0"
 )
+app.include_router(sla_alerts_router)
 app.include_router(sla_router)
 app.include_router(incident_analytics_router)
 app.include_router(incident_router)
