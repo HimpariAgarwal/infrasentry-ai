@@ -59,16 +59,12 @@ function ImageUpload() {
   }, []);
 
   useEffect(() => {
-    if (!file) {
-      setPreview("");
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    setPreview(objectUrl);
-
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [file]);
+    return () => {
+      if (preview) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
 
   function handleFileChange(
     event: React.ChangeEvent<HTMLInputElement>
@@ -81,6 +77,7 @@ function ImageUpload() {
 
     if (!selectedFile) {
       setFile(null);
+      setPreview("");
       return;
     }
 
@@ -93,6 +90,7 @@ function ImageUpload() {
     if (!allowedTypes.includes(selectedFile.type)) {
       setError("Please select a JPG, PNG or WEBP image.");
       setFile(null);
+      setPreview("");
       event.target.value = "";
       return;
     }
@@ -100,11 +98,13 @@ function ImageUpload() {
     if (selectedFile.size > 5 * 1024 * 1024) {
       setError("Image size must not exceed 5 MB.");
       setFile(null);
+      setPreview("");
       event.target.value = "";
       return;
     }
 
     setFile(selectedFile);
+    setPreview(URL.createObjectURL(selectedFile));
   }
 
   async function uploadImage(event: React.FormEvent<HTMLFormElement>) {
