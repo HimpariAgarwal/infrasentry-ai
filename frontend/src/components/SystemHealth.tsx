@@ -1,3 +1,4 @@
+import ReadinessStatus from "./ReadinessStatus";
 import { authenticatedFetch } from "../services/apiClient";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -203,6 +204,7 @@ export default function SystemHealth() {
 
   return (
     <section className="system-health-page">
+      <ReadinessStatus />
       <div className="health-topbar">
         <div>
           <h2>System Health Monitor</h2>
