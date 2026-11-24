@@ -1,3 +1,5 @@
+import { ShieldAlert } from "lucide-react";
+import SecurityDashboard from "./components/SecurityDashboard";
 import { authenticatedFetch } from "./services/apiClient";
 import { verifySession, clearToken } from "./services/authService";
 import Login from "./components/Login";
@@ -121,7 +123,7 @@ function App() {
   const [severityFilter, setSeverityFilter] = useState("all");
 
   const [activePage, setActivePage] = useState<
-    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health" | "reports-analytics" | "road-map" | "performance" | "system-health"  | "logs">("dashboard");
+    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health" | "reports-analytics" | "road-map" | "performance" | "system-health"  | "logs" | "security">("dashboard");
 
   const [form, setForm] = useState<ReportForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -565,6 +567,10 @@ function App() {
 
         <button className="nav-item" onClick={() => setActivePage("system-health")}><Activity size={18} /> <span>System Health</span></button>
 <button className="nav-item" onClick={() => setActivePage("logs")}><FileText size={18} /> <span>API Logs</span></button>
+
+        <button className="nav-item" onClick={() => setActivePage("security")}>
+          <ShieldAlert size={18} /> <span>Security Audit</span>
+        </button>
 <div className="sidebar-bottom">
           <div className="system-status">
             <span className="status-dot"></span>
@@ -1176,6 +1182,8 @@ function App() {
         {activePage === "ai-analytics" && (
           <BenchmarkAnalytics />
         )}
+        {activePage === "security" && <SecurityDashboard />}
+
         <footer className="footer">
           <p>
             Â© 2026 InfraSentry AI. Infrastructure Intelligence Platform.

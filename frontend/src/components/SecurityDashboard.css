@@ -1,0 +1,80 @@
+﻿.security-dashboard {
+  display: grid;
+  gap: 20px;
+  padding: 22px;
+}
+
+.security-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.security-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.security-heading p {
+  color: #8792a5;
+}
+
+.security-heading button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.security-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.security-stat {
+  display: grid;
+  gap: 9px;
+  padding: 20px;
+  border: 1px solid #29364a;
+  border-radius: 12px;
+  background: var(--card-bg, #111c2d);
+}
+
+.security-stat strong {
+  font-size: 28px;
+}
+
+.security-toolbar select {
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.security-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #29364a;
+  border-radius: 10px;
+}
+
+.security-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
+}
+
+.security-table-wrap th,
+.security-table-wrap td {
+  padding: 13px;
+  text-align: left;
+  border-bottom: 1px solid #29364a;
+}
+
+.security-error {
+  color: #dc4444;
+}
