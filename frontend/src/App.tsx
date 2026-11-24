@@ -1,3 +1,4 @@
+import SLANotificationCenter from "./components/SLANotificationCenter";
 import SLAAlertsDashboard from "./components/SLAAlertsDashboard";
 import SLADashboard from "./components/SLADashboard";
 import IncidentAnalytics from "./components/IncidentAnalytics";
@@ -623,7 +624,8 @@ function App() {
  }
 
 
-        <NotificationCenter />
+        <SLANotificationCenter />
+      <NotificationCenter />
         <header className="top-header">
           <div>
             <h1>
