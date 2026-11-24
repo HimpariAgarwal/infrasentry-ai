@@ -103,3 +103,6 @@ research/RoadDamageDetector-master/*
 !research/RoadDamageDetector-master/LICENSE
 
 runs/
+**/backups/
+
+logs/
