@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16
+    container_name: infrasentry-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: infrasentry
+      POSTGRES_USER: infrasentry
+      POSTGRES_PASSWORD: infrasentry_local_only_change_me
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U infrasentry -d infrasentry"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: infrasentry-backend
+    restart: unless-stopped
+    env_file:
+      - backend/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://infrasentry:infrasentry_local_only_change_me@db:5432/infrasentry
+      PYTHONPATH: /app:/app/backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_uploads:/app/backend/uploads
+      - backend_processed:/app/backend/processed
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  postgres_data:
+  backend_uploads:
+  backend_processed:
