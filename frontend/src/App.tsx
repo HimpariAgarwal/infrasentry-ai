@@ -1,3 +1,4 @@
+import SLAAlertsDashboard from "./components/SLAAlertsDashboard";
 import SLADashboard from "./components/SLADashboard";
 import IncidentAnalytics from "./components/IncidentAnalytics";
 import { ShieldCheck } from "lucide-react";
@@ -128,8 +129,7 @@ function App() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [severityFilter, setSeverityFilter] = useState("all");
 
-  const [activePage, setActivePage] = useState<
-    "dashboard" | "new-report" | "image-upload" | "ai-analytics" | "detection-history" | "model-health" | "reports-analytics" | "road-map" | "performance" | "system-health"  | "logs" | "security" | "security-alerts" | "incidents" | "incident-analytics" | "sla">("dashboard");
+  const [activePage, setActivePage] = useState<string>("dashboard");
 
   const [form, setForm] = useState<ReportForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -593,6 +593,21 @@ function App() {
         <button className="nav-item" onClick={() => setActivePage("sla")}>
           <Clock size={18} /> <span>SLA Monitoring</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActivePage("sla-alerts")}
+          style={{
+            display: "flex", alignItems: "center", gap: "10px",
+            width: "100%", padding: "11px 14px", marginBottom: "6px",
+            border: "none", borderRadius: "8px", cursor: "pointer",
+            textAlign: "left", color: "inherit",
+            background: activePage === "sla-alerts" ? "rgba(100,116,139,.25)" : "transparent"
+          }}
+        >
+          <span>??</span> SLA Alerts
+        </button>
+
 <div className="sidebar-bottom">
           <div className="system-status">
             <span className="status-dot"></span>
@@ -1215,7 +1230,10 @@ function App() {
 
         {activePage === "sla" && <SLADashboard />}
 
-        <footer className="footer">
+        
+      {activePage === "sla-alerts" && <SLAAlertsDashboard />}
+
+<footer className="footer">
           <p>
             Â© 2026 InfraSentry AI. Infrastructure Intelligence Platform.
           </p>
