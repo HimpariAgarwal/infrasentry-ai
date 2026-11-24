@@ -1,5 +1,11 @@
-﻿import jsPDF from "jspdf";
+import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+type JsPDFWithAutoTable = jsPDF & {
+  lastAutoTable: {
+    finalY: number;
+  };
+};
+
 
 export interface RetryReportRun {
   timestamp: string;
@@ -20,7 +26,8 @@ export interface RetryReportMetrics {
 }
 
 function csvEscape(value: unknown): string {
-  const text = String(value ?? "");
+  let text = String(value ?? "");
+  if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
   return `"${text.replace(/"/g, '""')}"`;
 }
 
@@ -80,7 +87,7 @@ export function exportRetryMetricsPDF(data: RetryReportMetrics): void {
   });
 
   autoTable(pdf, {
-    startY: (pdf as any).lastAutoTable.finalY + 12,
+    startY: (pdf as JsPDFWithAutoTable).lastAutoTable.finalY + 12,
     head: [["Timestamp", "Status", "Attempts", "Duration", "Error"]],
     body: data.history.map((run) => [
       run.timestamp,

@@ -37,11 +37,33 @@ type HistoryRecord = {
   created_at: string | null;
 };
 
-function getRecords(payload: any): HistoryRecord[] {
-  if (Array.isArray(payload)) return payload;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isHistoryRecord(value: unknown): value is HistoryRecord {
+  if (!isRecord(value)) return false;
+
+  return (
+    typeof value.id === "string" &&
+    typeof value.filename === "string" &&
+    typeof value.model === "string" &&
+    Array.isArray(value.detections)
+  );
+}
+
+function getRecords(payload: unknown): HistoryRecord[] {
+  if (Array.isArray(payload)) {
+    return payload.filter(isHistoryRecord);
+  }
+
+  if (!isRecord(payload)) return [];
 
   for (const key of ["records", "items", "data", "history"]) {
-    if (Array.isArray(payload?.[key])) return payload[key];
+    const candidate = payload[key];
+    if (Array.isArray(candidate)) {
+      return candidate.filter(isHistoryRecord);
+    }
   }
 
   return [];

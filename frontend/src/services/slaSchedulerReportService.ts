@@ -1,5 +1,11 @@
-﻿import jsPDF from "jspdf";
+import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+type JsPDFWithAutoTable = jsPDF & {
+  lastAutoTable: {
+    finalY: number;
+  };
+};
+
 
 export interface SchedulerReport {
   total_runs: number;
@@ -41,10 +47,14 @@ export function exportSchedulerCSV(data: SchedulerReport) {
     ]),
   ];
 
+  const csvCell = (value: unknown): string => {
+    let text = String(value ?? "");
+    if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
+    return `"${text.replace(/"/g, '""')}"`;
+  };
+
   const csv = rows
-    .map((row) =>
-      row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")
-    )
+    .map((row) => row.map(csvCell).join(","))
     .join("\r\n");
 
   const blob = new Blob(["\uFEFF", csv], {
@@ -91,7 +101,7 @@ export function exportSchedulerPDF(data: SchedulerReport) {
   });
 
   autoTable(doc, {
-    startY: (doc as any).lastAutoTable.finalY + 12,
+    startY: (doc as JsPDFWithAutoTable).lastAutoTable.finalY + 12,
     head: [["Timestamp", "Status", "Duration (ms)", "Message"]],
     body: data.history.map((item) => [
       new Date(item.timestamp).toLocaleString(),

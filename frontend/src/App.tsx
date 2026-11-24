@@ -86,6 +86,9 @@ const emptyForm: ReportForm = {
 };
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [error, setError] = useState("");
+
   useEffect(() => {
     const handleSessionExpired = () => {
       clearToken();
@@ -100,7 +103,6 @@ function App() {
     };
   }, []);
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
 
   useEffect(() => {
@@ -127,7 +129,6 @@ function App() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const [search, setSearch] = useState("");

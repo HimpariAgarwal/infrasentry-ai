@@ -1,5 +1,11 @@
-﻿import jsPDF from "jspdf";
+import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+type JsPDFWithAutoTable = jsPDF & {
+  lastAutoTable: {
+    finalY: number;
+  };
+};
+
 
 interface IncidentAnalyticsReport {
   total_incidents: number;
@@ -46,7 +52,7 @@ export function exportIncidentAnalyticsPDF(data: IncidentAnalyticsReport) {
     headStyles: { fillColor: [30, 64, 120] },
   });
 
-  let y = (doc as any).lastAutoTable.finalY + 12;
+  let y = (doc as JsPDFWithAutoTable).lastAutoTable.finalY + 12;
 
   doc.setFontSize(13);
   doc.text("Severity Distribution", 14, y);
@@ -60,7 +66,7 @@ export function exportIncidentAnalyticsPDF(data: IncidentAnalyticsReport) {
     theme: "striped",
   });
 
-  y = (doc as any).lastAutoTable.finalY + 12;
+  y = (doc as JsPDFWithAutoTable).lastAutoTable.finalY + 12;
 
   if (y > 240) {
     doc.addPage();
@@ -79,7 +85,7 @@ export function exportIncidentAnalyticsPDF(data: IncidentAnalyticsReport) {
     theme: "striped",
   });
 
-  y = (doc as any).lastAutoTable.finalY + 12;
+  y = (doc as JsPDFWithAutoTable).lastAutoTable.finalY + 12;
 
   if (y > 240) {
     doc.addPage();
