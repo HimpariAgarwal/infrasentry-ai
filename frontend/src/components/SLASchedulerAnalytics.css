@@ -228,3 +228,25 @@
     flex-direction: column;
   }
 }
+
+.sla-analytics-export-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sla-analytics-export-actions button {
+  padding: 9px 12px;
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 8px;
+  background: var(--card-bg, #111827);
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.sla-analytics-export-actions button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}

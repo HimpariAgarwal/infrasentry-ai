@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Activity,
   CheckCircle,
@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { API_BASE, authenticatedFetch } from "../services/authService";
 import "./SLASchedulerAnalytics.css";
+import { exportSchedulerCSV, exportSchedulerPDF } from "../services/slaSchedulerReportService";
 
 interface SchedulerMetrics {
   total_runs: number;
@@ -81,10 +82,18 @@ export default function SLASchedulerAnalytics() {
           <h2>SLA Scheduler Analytics</h2>
           <p>Background escalation job performance and reliability</p>
         </div>
+        <div className="sla-analytics-export-actions">
+        <button onClick={() => metrics && exportSchedulerCSV(metrics)} disabled={!metrics}>
+          Export CSV
+        </button>
+        <button onClick={() => metrics && exportSchedulerPDF(metrics)} disabled={!metrics}>
+          Export PDF
+        </button>
         <button onClick={() => void loadData()} disabled={loading}>
           <RefreshCw size={16} />
           Refresh
         </button>
+        </div>
       </div>
 
       {error && <div className="sla-analytics-error">{error}</div>}
