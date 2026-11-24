@@ -1,0 +1,132 @@
+﻿.security-alerts-page {
+  display: grid;
+  gap: 20px;
+  padding: 22px;
+}
+
+.security-alerts-header,
+.security-alert-card-top,
+.security-alert-card-top > div,
+.security-alert-actions,
+.security-alert-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.security-alerts-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.security-alerts-header p {
+  color: #8792a5;
+}
+
+.security-alert-actions button,
+.resolve-alert-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.security-alert-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 15px;
+}
+
+.security-alert-kpi,
+.security-alert-card {
+  padding: 18px;
+  border: 1px solid #29364a;
+  border-radius: 12px;
+  background: var(--card-bg, #111c2d);
+}
+
+.security-alert-kpi {
+  display: grid;
+  gap: 8px;
+}
+
+.security-alert-kpi strong {
+  font-size: 27px;
+}
+
+.security-alert-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.security-alert-filters select {
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.security-alert-list {
+  display: grid;
+  gap: 14px;
+}
+
+.security-alert-card p {
+  margin: 14px 0;
+}
+
+.security-alert-meta {
+  justify-content: flex-start;
+  color: #8792a5;
+  font-size: 12px;
+}
+
+.alert-severity,
+.alert-status {
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.alert-severity.critical {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+.alert-severity.high {
+  background: #78350f;
+  color: #fde68a;
+}
+
+.alert-severity.medium {
+  background: #1e3a8a;
+  color: #bfdbfe;
+}
+
+.alert-status.active {
+  color: #fca5a5;
+}
+
+.alert-status.resolved {
+  color: #86efac;
+}
+
+.resolve-alert-button {
+  margin-top: 14px;
+}
+
+.security-alert-empty {
+  padding: 35px;
+  text-align: center;
+  color: #8792a5;
+}
+
+.security-alert-error {
+  color: #ef4444;
+}
