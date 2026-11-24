@@ -1,0 +1,144 @@
+﻿.sla-controls {
+  width: 100%;
+  margin: 20px 0;
+  padding: 22px;
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 14px;
+  background: var(--card-bg, #111827);
+  color: var(--text-color, #e5e7eb);
+}
+
+.sla-controls-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.sla-controls-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  font-size: 19px;
+}
+
+.sla-controls-header p {
+  margin: 6px 0 0;
+  color: var(--muted-text, #94a3b8);
+  font-size: 13px;
+}
+
+.sla-control-refresh,
+.sla-control-grid button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color, #475569);
+  border-radius: 8px;
+  background: var(--surface-bg, #1e293b);
+  color: inherit;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.sla-control-grid button:hover:not(:disabled),
+.sla-control-refresh:hover:not(:disabled) {
+  border-color: #38bdf8;
+}
+
+.sla-control-grid button:disabled,
+.sla-control-refresh:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sla-control-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px;
+  margin-bottom: 16px;
+  border-radius: 9px;
+  background: var(--surface-bg, #1e293b);
+  font-size: 13px;
+}
+
+.sla-control-status strong {
+  margin-left: auto;
+}
+
+.sla-control-indicator {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ef4444;
+}
+
+.sla-control-indicator.active {
+  background: #22c55e;
+}
+
+.sla-control-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sla-control-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.sla-control-details div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--surface-bg, #1e293b);
+  overflow-wrap: anywhere;
+}
+
+.sla-control-details span {
+  color: var(--muted-text, #94a3b8);
+  font-size: 12px;
+}
+
+.sla-control-details strong {
+  font-size: 13px;
+}
+
+.sla-control-success,
+.sla-control-error,
+.sla-control-info {
+  margin: 14px 0 0;
+  font-size: 13px;
+}
+
+.sla-control-success {
+  color: #22c55e;
+}
+
+.sla-control-error {
+  color: #ef4444;
+}
+
+.sla-control-info {
+  color: #38bdf8;
+}
+
+@media (max-width: 600px) {
+  .sla-controls {
+    padding: 15px;
+  }
+
+  .sla-control-grid button {
+    flex: 1 1 42%;
+  }
+}

@@ -40,6 +40,7 @@ import ReportsAnalytics from "./components/ReportsAnalytics";
 import RoadDamageMap from "./components/RoadDamageMap";
 import PerformanceDashboard from "./components/PerformanceDashboard";
 import "./App.css";
+import SLASchedulerControls from "./components/SLASchedulerControls";
 
 const API = "http://127.0.0.1:8000";
 
@@ -1250,7 +1251,12 @@ function App() {
             Â© 2026 InfraSentry AI. Infrastructure Intelligence Platform.
           </p>
         
-      {activePage === "sla-analytics" && <SLASchedulerAnalytics />}
+      {activePage === "sla-analytics" && (
+        <>
+          <SLASchedulerAnalytics />
+          <SLASchedulerControls />
+        </>
+      )}
 
       </footer>
 
