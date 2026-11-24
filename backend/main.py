@@ -1,3 +1,4 @@
+from backend.threat_router import router as threat_router
 from backend.security_router import router as security_router
 from backend.api_access_control import APIAccessControlMiddleware
 from auth_router import auth_router
@@ -149,6 +150,7 @@ app = FastAPI(
     description="AI-powered Road Infrastructure Intelligence Platform",
     version="1.0.0"
 )
+app.include_router(threat_router)
 app.include_router(security_router)
 app.add_middleware(APIAccessControlMiddleware)
 
