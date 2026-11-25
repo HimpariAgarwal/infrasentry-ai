@@ -1,4 +1,5 @@
-﻿import { useState } from "react";
+﻿
+import { useState } from "react";
 import {
   detectRoadDamage,
   type DetectionResponse
@@ -6,6 +7,7 @@ import {
 
 export default function DetectionPanel() {
   const [file, setFile] = useState<File | null>(null);
+  const [confidence, setConfidence] = useState(0.10);
   const [result, setResult] = useState<DetectionResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,7 +23,7 @@ export default function DetectionPanel() {
     setResult(null);
 
     try {
-      const data = await detectRoadDamage(file);
+      const data = await detectRoadDamage(file, confidence);
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Detection failed.");
@@ -52,6 +54,32 @@ export default function DetectionPanel() {
         }}
       />
 
+      <div style={{ marginTop: 20 }}>
+        <label htmlFor="confidence-threshold">
+          **Confidence Threshold: {(confidence * 100).toFixed(0)}%**
+        </label>
+
+        <input
+          id="confidence-threshold"
+          type="range"
+          min="0.10"
+          max="0.90"
+          step="0.05"
+          value={confidence}
+          onChange={(event) => {
+            setConfidence(Number(event.target.value));
+            setResult(null);
+          }}
+          disabled={loading}
+          style={{ width: "100%", marginTop: 10 }}
+        />
+
+        <p>
+          Lower threshold may detect more objects, including uncertain
+          predictions. Higher threshold keeps more confident detections.
+        </p>
+      </div>
+
       <div style={{ marginTop: 16 }}>
         <button onClick={handleDetect} disabled={loading || !file}>
           {loading ? "Analyzing..." : "Detect Road Damage"}
@@ -65,6 +93,7 @@ export default function DetectionPanel() {
           <h3>Detection Results</h3>
           <p>{result.message}</p>
           <p>Model: {result.model}</p>
+          <p>Threshold used: {(result.confidence_threshold * 100).toFixed(0)}%</p>
           <p>Detections: {result.detections_count}</p>
           <p>Inference: {result.inference_time_ms} ms</p>
 
